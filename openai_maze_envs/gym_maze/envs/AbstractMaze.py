@@ -23,7 +23,8 @@ class AbstractMaze(gym.Env):
         self.maze = Maze(matrix)
         self.pos_x = None
         self.pos_y = None
-
+        #Minecraft paper stops an episode after 50 steps
+        self.steps_taken = 0 
         self.action_space = spaces.Discrete(8)
         self.observation_space = spaces.Discrete(8)
 
@@ -34,6 +35,8 @@ class AbstractMaze(gym.Env):
         observation = self._observe()
         reward = self._get_reward()
         episode_over = self._is_over()
+
+        self.steps_taken += 1
 
         return observation, reward, episode_over, {}
 
@@ -65,12 +68,19 @@ class AbstractMaze(gym.Env):
 
     def _get_reward(self):
         if self.maze.is_reward(self.pos_x, self.pos_y):
-            return 1000
+            return 1.
 
-        return 0
+        #Modification as per Minecraft paper:
+        return -0.04
+        #return 0
 
     def _is_over(self):
-        return self.maze.is_reward(self.pos_x, self.pos_y)
+        #return self.maze.is_reward(self.pos_x, self.pos_y)
+        if(self.maze.is_reward(self.pos_x, self.pos_y) or self.steps_taken >= 50):
+            self.steps_taken = 0
+            return True
+        else:
+            return False
 
     def get_all_possible_transitions(self):
         """

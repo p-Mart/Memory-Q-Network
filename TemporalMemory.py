@@ -15,6 +15,7 @@ from keras.layers.recurrent import RNN
 from keras.legacy.layers import Recurrent
 from keras.legacy import interfaces
 
+import tensorflow as tf
 
 class SimpleMemoryCell(Layer):
     """Cell class for the LSTM layer.
@@ -123,18 +124,22 @@ class SimpleMemoryCell(Layer):
         M_key.append(m_key) # shape = [Mxm]
         M_value.append(m_value) # shape = [Mxm]
         '''
+        at = K.exp(K.batch_dot(M_key_tens, h_t, axes=[2,1]))
 
-        at = K.exp(K.dot(M_key_tens[0, :, :], K.transpose(h_t)))
         #at = K.exp(K.dot(M_key_tens, K.transpose(h_t)))
-        at_sum = K.sum(at, axis=0)
+        at_sum = K.sum(at, axis=1)
         at_sum = K.reshape(at_sum, (-1, 1))
         at_sum_repeated = K.repeat(at_sum, self.memory_size)
-        at_sum_repeated = K.reshape(at_sum_repeated, (self.memory_size, -1))
+        at_sum_repeated = K.reshape(at_sum_repeated, (-1, self.memory_size))
         at /= at_sum_repeated # shape = [Mx1]
 
-        # calculate output from attention probability
-        output = K.dot(K.transpose(at), M_value_tens[0, :, :]) # shape = [1xm]
 
+        # calculate output from attention probability
+        #output = K.dot(K.transpose(at), M_value_tens[0, :, :]) # shape = [1xm]
+        #output = K.dot(K.transpose(at), M_value_tens)
+
+        output = K.batch_dot(M_value_tens, at, axes=[1,1])
+        print output
         #update states
         M_key.pop(0) # shape = [M-1xm]
         M_value.pop(0) # shape = [M-1xm]
