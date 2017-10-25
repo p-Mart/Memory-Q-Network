@@ -36,6 +36,7 @@ class Maze:
 
         return possible_cords
 
+
     def perception(self, pos_x, pos_y):
         if not self._within_x_range(pos_x):
             raise ValueError('X position not within allowed range')

@@ -14,7 +14,7 @@ from rl.callbacks import TrainEpisodeLogger
 import gym
 from openai_maze_envs import gym_maze
 
-env = gym.make('BMaze4-v0')
+env = gym.make('MazeF1-v1')
 nb_actions = env.action_space.n
 
 print nb_actions
