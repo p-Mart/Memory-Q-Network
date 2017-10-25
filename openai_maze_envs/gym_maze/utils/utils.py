@@ -82,7 +82,7 @@ def raytraceLine(x0, y0, x1, y1):
         while y != y1:
             points.append((x, y))
             err -= dx
-            if err < 0
+            if err < 0:
                 x += sx
                 err += dy
 
