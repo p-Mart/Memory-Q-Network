@@ -11,7 +11,7 @@ from pygame.locals import *
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
-maze = gym.make('MazeF1-v0')
+maze = gym.make('Maze5-v0')
 
 possible_actions = list(range(8))
 #transitions = maze.env.get_all_possible_transitions()

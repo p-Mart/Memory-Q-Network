@@ -1,8 +1,12 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 import gym
 from gym import error, spaces, utils
 from gym.utils import seeding
 
-from gym_maze import Maze, WALL_MAPPING, ACTION_LOOKUP
+from gym_maze import Maze, DARK_MAPPING, PATH_MAPPING, WALL_MAPPING, \
+                                        REWARD_MAPPING, ACTION_LOOKUP
+
 from gym_maze.utils import get_all_possible_transitions
 
 import numpy as np
@@ -26,13 +30,17 @@ class AbstractMaze(gym.Env):
         #Minecraft paper stops an episode after 50 steps
         self.steps_taken = 0 
         self.action_space = spaces.Discrete(8)
-        self.observation_space = spaces.Discrete(8)
+        #self.observation_space = spaces.Discrete(8)
+        observation_size = self.maze.max_x*self.maze.max_y
+        self.observation_space = spaces.Discrete(observation_size)
 
     def _step(self, action):
         previous_observation = self._observe()
         self._take_action(action, previous_observation)
 
         observation = self._observe()
+        #observation.reshape((-1,)) #Flatten observation?
+        #print observation
         reward = self._get_reward()
         episode_over = self._is_over()
 
@@ -54,11 +62,11 @@ class AbstractMaze(gym.Env):
             outfile = sys.stdout
             outfile.write("\n")
 
-            situation = np.copy(self.maze.matrix)
+            situation = np.copy(self.maze.perception(self.pos_x, self.pos_y))
             situation[self.pos_y, self.pos_x] = ANIMAT_MARKER
 
             for row in situation:
-                outfile.write(" ".join(self._render_element(el) for el in row))
+                outfile.write("".join(self._render_element(el) for el in row))
                 outfile.write("\n")
         else:
             super(AbstractMaze, self).render(mode=mode)
@@ -95,38 +103,48 @@ class AbstractMaze(gym.Env):
         animat_moved = False
         action_type = ACTION_LOOKUP[action]
 
-        if action_type == "N" and not self.is_wall(observation[0]):
+        n = (self.pos_x, self.pos_y - 1)
+        ne = (self.pos_x+1, self.pos_y-1)
+        e = (self.pos_x+1, self.pos_y)
+        se = (self.pos_x+1, self.pos_y+1)
+        s = (self.pos_x, self.pos_y+1)
+        sw = (self.pos_x-1, self.pos_y+1)
+        w = (self.pos_x-1, self.pos_y)
+        nw = (self.pos_x-1, self.pos_y-1)
+
+
+        if action_type == "N" and not self.maze.is_wall(n[0],n[1]):
             self.pos_y -= 1
             animat_moved = True
 
-        if action_type == 'NE' and not self.is_wall(observation[1]):
+        if action_type == 'NE' and not self.maze.is_wall(ne[0],ne[1]):
             self.pos_x += 1
             self.pos_y -= 1
             animat_moved = True
 
-        if action_type == "E" and not self.is_wall(observation[2]):
+        if action_type == "E" and not self.maze.is_wall(e[0],e[1]):
             self.pos_x += 1
             animat_moved = True
 
-        if action_type == 'SE' and not self.is_wall(observation[3]):
+        if action_type == 'SE' and not self.maze.is_wall(se[0],se[1]):
             self.pos_x += 1
             self.pos_y += 1
             animat_moved = True
 
-        if action_type == "S" and not self.is_wall(observation[4]):
+        if action_type == "S" and not self.maze.is_wall(s[0],s[1]):
             self.pos_y += 1
             animat_moved = True
 
-        if action_type == 'SW' and not self.is_wall(observation[5]):
+        if action_type == 'SW' and not self.maze.is_wall(sw[0],sw[1]):
             self.pos_x -= 1
             self.pos_y += 1
             animat_moved = True
 
-        if action_type == "W" and not self.is_wall(observation[6]):
+        if action_type == "W" and not self.maze.is_wall(w[0],w[1]):
             self.pos_x -= 1
             animat_moved = True
 
-        if action_type == 'NW' and not self.is_wall(observation[7]):
+        if action_type == 'NW' and not self.maze.is_wall(nw[0],nw[1]):
             self.pos_x -= 1
             self.pos_y -= 1
             animat_moved = True
@@ -142,17 +160,19 @@ class AbstractMaze(gym.Env):
 
     @staticmethod
     def is_wall(perception):
-        return perception == str(WALL_MAPPING)
+        return perception == WALL_MAPPING
 
     @staticmethod
     def _render_element(el):
-        if el == 1:
-            return utils.colorize('X', 'gray')
-        elif el == 0:
+        if el == WALL_MAPPING:
+            return utils.colorize(u'█', 'white')
+        elif el == PATH_MAPPING:
             return utils.colorize('.', 'white')
-        elif el == 9:
-            return utils.colorize('$', 'yellow')
+        elif el == REWARD_MAPPING:
+            return utils.colorize('$', 'green')
         elif el == ANIMAT_MARKER:
             return utils.colorize('A', 'red')
+        elif el == DARK_MAPPING:
+            return utils.colorize(u'▒', 'gray')
         else:
             return utils.colorize(el, 'cyan')

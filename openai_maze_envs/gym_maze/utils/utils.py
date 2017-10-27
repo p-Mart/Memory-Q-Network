@@ -57,7 +57,7 @@ def _create_graph(env):
 
     return g
 
-def raycastLine(x0, y0, x1, y1):
+def raycastLine(x0, y0, x1, y1, maze):
     '''Bresenham's Line Algorithm'''
 
     points = [] #List of points in raytrace
@@ -71,6 +71,10 @@ def raycastLine(x0, y0, x1, y1):
         err = dx / 2.0
         while x != x1:
             points.append((x, y))
+            
+            if maze.is_wall(x, y):
+                return points
+
             err -= dy
             if err < 0:
                 y += sy
@@ -81,12 +85,17 @@ def raycastLine(x0, y0, x1, y1):
         err = dy / 2.0
         while y != y1:
             points.append((x, y))
+            
+            if maze.is_wall(x, y):
+                return points
+
             err -= dx
             if err < 0:
                 x += sx
                 err += dy
 
             y += sy
+
 
     points.append((x,y))
     return points

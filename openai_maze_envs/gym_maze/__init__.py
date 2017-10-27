@@ -2,8 +2,8 @@ import logging
 
 from gym.envs.registration import register
 
-from gym_maze.Maze import Maze
-from gym_maze.Maze import PATH_MAPPING, WALL_MAPPING, REWARD_MAPPING
+from .Maze import Maze
+from .Maze import PATH_MAPPING, WALL_MAPPING, REWARD_MAPPING, DARK_MAPPING
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +23,8 @@ def find_action_by_direction(direction):
     for key, val in ACTION_LOOKUP.items():
         if val == direction:
             return key
+
+#Need to write a handler so that these don't get re-registered.
 
 register(
     id='MazeF1-v0',

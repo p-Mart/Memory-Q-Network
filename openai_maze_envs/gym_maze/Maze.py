@@ -1,8 +1,10 @@
 import logging
 from utils import raycastLine
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
+DARK_MAPPING = 2
 PATH_MAPPING = 0
 WALL_MAPPING = 1
 REWARD_MAPPING = 9
@@ -37,10 +39,31 @@ class Maze:
 
         return possible_cords
 
+    def perception(self, pos_x, pos_y):
+        #Run the Bresenham line algorithm in a square pattern,
+        #along the boundary of the maze. This is to simulate 
+        #line-of-sight.
+        visible_points = set([])
+        for x in range(self.max_x):
+            visible_points.update(raycastLine(pos_x, pos_y, x, 0, self))
+            visible_points.update(raycastLine(pos_x, pos_y, x, self.max_y, self))
+        for y in range(self.max_y):
+            visible_points.update(raycastLine(pos_x, pos_y, 0, y, self))
+            visible_points.update(raycastLine(pos_x, pos_y, self.max_x, y, self))
+            
+        perception = np.copy(self.matrix)
+        all_points = set([(x,y) for y in range(self.max_y) for x in range(self.max_x)])
+        #print "Set of visible points\n", visible_points
+        #print "Set of non-visible points\n", all_points - visible_points
 
-    #def perception(self, pos_x, pos_y):
-    #    return self.matrix
+        for point in (all_points - visible_points):
+            perception[point[1], point[0]] = DARK_MAPPING
+
+        #print perception
+
+        return perception
     
+    '''
     def perception(self, pos_x, pos_y):
         if not self._within_x_range(pos_x):
             raise ValueError('X position not within allowed range')
@@ -97,7 +120,7 @@ class Maze:
             nw = str(self.matrix[pos_y - 1, pos_x - 1])
 
         return n, ne, e, se, s, sw, w, nw
-    
+    '''
 
     def is_wall(self, pos_x, pos_y):
         return self.matrix[pos_y, pos_x] == WALL_MAPPING
