@@ -1,4 +1,5 @@
 import logging
+from utils import raycastLine
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +38,9 @@ class Maze:
         return possible_cords
 
 
+    #def perception(self, pos_x, pos_y):
+    #    return self.matrix
+    
     def perception(self, pos_x, pos_y):
         if not self._within_x_range(pos_x):
             raise ValueError('X position not within allowed range')
@@ -93,6 +97,7 @@ class Maze:
             nw = str(self.matrix[pos_y - 1, pos_x - 1])
 
         return n, ne, e, se, s, sw, w, nw
+    
 
     def is_wall(self, pos_x, pos_y):
         return self.matrix[pos_y, pos_x] == WALL_MAPPING

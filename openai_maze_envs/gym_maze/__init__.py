@@ -25,43 +25,44 @@ def find_action_by_direction(direction):
             return key
 
 register(
-    id='MazeF1-v1',
+    id='MazeF1-v0',
     entry_point='gym_maze.envs:MazeF1',
     #max_episode_steps=50,
     #nondeterministic=False
 )
 
 register(
-    id='MazeF2-v1',
+    id='MazeF2-v0',
     entry_point='gym_maze.envs:MazeF2',
     #max_episode_steps=50,
     #nondeterministic=False
 )
 
 register(
-    id='MazeF3-v1',
+    id='MazeF3-v0',
     entry_point='gym_maze.envs:MazeF3',
     #max_episode_steps=50,
     #nondeterministic=False
 )
 
 register(
-    id='MazeF4-v1',
+    id='MazeF4-v0',
     entry_point='gym_maze.envs:MazeF4',
     #max_episode_steps=50,
     #nondeterministic=True
 )
 
 register(
-    id='Maze5-v1',
+    id='Maze5-v0',
     entry_point='gym_maze.envs:Maze5',
     #max_episode_steps=50,
     #nondeterministic=True
 )
 
 register(
-    id='BMaze4-v1',
+    id='BMaze4-v0',
     entry_point='gym_maze.envs:BMaze4',
     #max_episode_steps=50,
     #nondeterministic=False
 )
+

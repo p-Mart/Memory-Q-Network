@@ -1,7 +1,7 @@
 import networkx as nx
 
-from gym_maze import find_action_by_direction
-from gym_maze.Maze import Maze
+from .. import *
+#from .Maze import Maze
 
 
 def get_all_possible_transitions(maze):
@@ -57,7 +57,7 @@ def _create_graph(env):
 
     return g
 
-def raytraceLine(x0, y0, x1, y1):
+def raycastLine(x0, y0, x1, y1):
     '''Bresenham's Line Algorithm'''
 
     points = [] #List of points in raytrace
