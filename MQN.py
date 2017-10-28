@@ -15,6 +15,14 @@ import gym
 from openai_maze_envs import gym_maze
 
 env = gym.make('MazeF4-v0')
+env2 = gym.make('MazeF1-v0')
+env3 = gym.make('MazeF2-v0')
+env4 = gym.make('MazeF3-v0')
+env5 = gym.make('Maze5-v0')
+env6 = gym.make('BMaze4-v0')
+
+envs = [env,env2,env3,env4,env5,env6]
+
 nb_actions = env.action_space.n
 
 print nb_actions
@@ -88,7 +96,7 @@ dqn = DQNAgent(model=model, target_model=target_model, nb_actions=nb_actions, me
                             nb_steps_warmup=nb_steps_warmup, target_model_update=0.999, policy=policy)
 dqn.compile(RMSprop(lr=1e-4,clipnorm=20.),metrics=["mae"])
 
-dqn.fit(env, nb_steps=nb_steps, visualize=False, verbose=0, callbacks=callbacks)
+dqn.fit(env, envs=envs, nb_steps=nb_steps, visualize=False, verbose=0, callbacks=callbacks)
 
 
 ##### Metrics #####

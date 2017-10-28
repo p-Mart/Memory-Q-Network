@@ -41,7 +41,7 @@ class Agent(object):
         """
         return {}
 
-    def fit(self, env, nb_steps, action_repetition=1, callbacks=None, verbose=1,
+    def fit(self, env, nb_steps, envs=None, action_repetition=1, callbacks=None, verbose=1,
             visualize=False, nb_max_start_steps=0, start_step_policy=None, log_interval=10000,
             nb_max_episode_steps=None):
         """Trains the agent on the given environment.
@@ -81,6 +81,11 @@ class Agent(object):
 
         callbacks = [] if not callbacks else callbacks[:]
 
+        #Environment sampling
+        if(envs == None):
+            envs = [env]
+
+
         if verbose == 1:
             callbacks += [TrainIntervalLogger(interval=log_interval)]
         elif verbose > 1:
@@ -115,6 +120,11 @@ class Agent(object):
             while self.step < nb_steps:
                 if observation is None:  # start of a new episode
                     callbacks.on_episode_begin(episode)
+
+                    #Sample from list of environments
+                    env = np.random.choice(envs)
+
+                    callbacks._set_env(env)
                     episode_step = 0
                     episode_reward = 0.
 

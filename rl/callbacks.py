@@ -155,7 +155,7 @@ class TrainEpisodeLogger(Callback):
 
         nb_step_digits = str(int(np.ceil(np.log10(self.params['nb_steps']))) + 1)
 
-        print(metrics_variables)
+        #print(metrics_variables)
         self.episodic_metrics_variables[episode] = metrics_variables
         #print("Inside of Callbacks.py \n \n")
         #print("Observations: \n", self.observations[episode])
@@ -164,9 +164,10 @@ class TrainEpisodeLogger(Callback):
         #print("\n\n")
 
         #print("Recasting observations: \n\n")
-        steps = range(len(self.observations[episode]))
-        entries = range(len(self.observations[episode][0]))
-        self.observations[episode] = [tuple([int(self.observations[episode][step][entry]) for entry in entries]) for step in steps]
+        #steps = range(len(self.observations[episode]))
+        #entries = range(len(self.observations[episode][0]))
+        #print(self.observations[episode])
+        #self.observations[episode] = [tuple([int(self.observations[episode][step][entry]) for entry in entries]) for step in steps]
         #print(self.observations[episode], "\n\n")
 
         template = '{step: ' + nb_step_digits + 'd}/{nb_steps}: episode: {episode}, duration: {duration:.3f}s, episode steps: {episode_steps}, steps per second: {sps:.0f}, episode reward: {episode_reward:.3f}, mean reward: {reward_mean:.3f} [{reward_min:.3f}, {reward_max:.3f}], mean action: {action_mean:.3f} [{action_min:.3f}, {action_max:.3f}], mean observation: {obs_mean:.3f} [{obs_min:.3f}, {obs_max:.3f}], {metrics}'
