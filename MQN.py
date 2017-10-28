@@ -14,7 +14,7 @@ from rl.callbacks import TrainEpisodeLogger
 import gym
 from openai_maze_envs import gym_maze
 
-env = gym.make('MazeF1-v0')
+env = gym.make('MazeF4-v0')
 nb_actions = env.action_space.n
 
 print nb_actions
@@ -85,8 +85,8 @@ log = TrainEpisodeLogger()
 callbacks = [log]
 
 dqn = DQNAgent(model=model, target_model=target_model, nb_actions=nb_actions, memory=experience,
-                            nb_steps_warmup=nb_steps_warmup, target_model_update=1e-2, policy=policy)
-dqn.compile(RMSprop(lr=1e-4),metrics=["mae"])
+                            nb_steps_warmup=nb_steps_warmup, target_model_update=0.999, policy=policy)
+dqn.compile(RMSprop(lr=1e-4,clipnorm=20.),metrics=["mae"])
 
 dqn.fit(env, nb_steps=nb_steps, visualize=False, verbose=0, callbacks=callbacks)
 
@@ -126,3 +126,7 @@ plt.title("Reward")
 plt.plot(episodic_reward_means, 'g')
 plt.show()
 
+#Need to update environment to have indicator tiles
+#Need better metrics (percent of episodes)
+#Need model saving / loading
+#Need model visualization ability
