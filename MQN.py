@@ -4,17 +4,17 @@ import matplotlib.pyplot as plt
 from keras.layers import *
 from keras.models import Model
 
-from keras.optimizers import Adam
+from keras.optimizers import RMSprop
 from TemporalMemory import SimpleMemory, SimpleMemoryCell
 from rl.agents.dqn import DQNAgent
-from rl.policy import BoltzmannQPolicy
+from rl.policy import EpsGreedyQPolicy, LinearAnnealedPolicy
 from rl.memory import SequentialMemory
 from rl.callbacks import TrainEpisodeLogger
 
 import gym
 from openai_maze_envs import gym_maze
 
-env = gym.make('MazeF1-vz')
+env = gym.make('MazeF1-v0')
 nb_actions = env.action_space.n
 
 print nb_actions
@@ -26,18 +26,26 @@ context_size = 16
 
 def MQNmodel(e_t_size, context_size):
 
-    input_layer = Input((None,) + (8,))
+    input_layer = Input((1,None,None))
 
+    provider = Conv2D(filters=24, kernel_size=(2,2), padding="same", data_format="channels_first")(input_layer)
+    provider = Conv2D(filters=12, kernel_size=(2,2), padding="same", data_format="channels_first")(provider)
+    print provider
+    '''
     provider = Dense(64)(input_layer)
     provider = Dense(64)(provider)
     provider = Dense(64)(provider)
     provider = Dense(64)(provider)
-
+    '''
+    #provider = Reshape((-1,))(provider)
+    provider = GlobalMaxPooling2D(data_format="channels_first")(provider)
+    print provider
     e = Dense(e_t_size)(provider)
+    #e = Flatten()(e)
     context = Dense(context_size, activation="linear")(e)
 
     conc = Concatenate()([e, context])
-
+    conc = Reshape((1, -1))(conc)
     memory = SimpleMemory(context_size, memory_size=11)(conc)
 
     #Need to add the correct output as per paper
@@ -54,22 +62,33 @@ def MQNmodel(e_t_size, context_size):
     return model
 
 
+nb_steps_warmup = int(1e5)
+nb_steps = int(1e6)
 
 model = MQNmodel(e_t_size, context_size)
 target_model = MQNmodel(e_t_size, context_size)
 target_model.set_weights(model.get_weights())
 
-experience = SequentialMemory(limit=50000, window_length=1)
-policy = BoltzmannQPolicy()
+experience = SequentialMemory(limit=int(1e5), window_length=1)
+
+policy = LinearAnnealedPolicy(
+    inner_policy=EpsGreedyQPolicy(),
+    attr="eps",
+    value_max=1.0,
+    value_min=0.1,
+    value_test=0.,
+    nb_steps=nb_steps_warmup
+)
+
 
 log = TrainEpisodeLogger()
 callbacks = [log]
 
 dqn = DQNAgent(model=model, target_model=target_model, nb_actions=nb_actions, memory=experience,
-                            nb_steps_warmup=1000, target_model_update=1e-2, policy=policy)
-dqn.compile(Adam(lr=1e-3),metrics=["mae"])
+                            nb_steps_warmup=nb_steps_warmup, target_model_update=1e-2, policy=policy)
+dqn.compile(RMSprop(lr=1e-4),metrics=["mae"])
 
-dqn.fit(env, nb_steps=100000, visualize=False, verbose=0, callbacks=callbacks)
+dqn.fit(env, nb_steps=nb_steps, visualize=False, verbose=0, callbacks=callbacks)
 
 
 ##### Metrics #####
