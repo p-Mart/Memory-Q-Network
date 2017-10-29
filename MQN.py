@@ -88,7 +88,7 @@ def MQNmodel(e_t_size, context_size):
     print model.summary()
     return model
 
-nb_steps_warmup = int(1e5)
+nb_steps_warmup = int(2e5)
 nb_steps = int(1e6)
 
 model = MQNmodel(e_t_size, context_size)
@@ -113,7 +113,7 @@ callbacks = [log]
 dqn = DQNAgent(model=model, target_model=target_model, nb_actions=nb_actions, memory=experience,
                             nb_steps_warmup=nb_steps_warmup, target_model_update=0.999, policy=policy)
 dqn.compile(RMSprop(lr=1e-4,clipnorm=20.),metrics=["mae"])
-dqn.fit(env, envs=envs, nb_steps=nb_steps, verbose=0, callbacks=callbacks)
+dqn.fit(env, envs=envs, switch_rate=10000, nb_steps=nb_steps, verbose=0, callbacks=callbacks)
 '''
 for i in range(nb_episodes):
 
@@ -126,7 +126,7 @@ for i in range(nb_episodes):
         done[0] = False
         env = np.random.choice(envs)
 '''
-dqn.save_weights('dqn_weights_singlegoal_v2.h5')
+dqn.save_weights('dqn_weights_singlegoal_switchrate_v1.h5')
 
 ##### Metrics #####
 episodic_reward_means = []

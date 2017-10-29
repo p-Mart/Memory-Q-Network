@@ -41,7 +41,7 @@ class Agent(object):
         """
         return {}
 
-    def fit(self, env, nb_steps, envs=None, action_repetition=1, callbacks=None, verbose=1,
+    def fit(self, env, nb_steps, envs=None, switch_rate=None, action_repetition=1, callbacks=None, verbose=1,
             visualize=False, nb_max_start_steps=0, start_step_policy=None, log_interval=10000,
             nb_max_episode_steps=None):
         """Trains the agent on the given environment.
@@ -82,6 +82,7 @@ class Agent(object):
         callbacks = [] if not callbacks else callbacks[:]
 
         #Environment sampling
+        env_number = 0
         if(envs == None):
             envs = [env]
 
@@ -111,6 +112,10 @@ class Agent(object):
         callbacks.on_train_begin()
 
         episode = 0
+
+        #Need this to keep track of when to perform a context (env) switch.
+        context_steps = 0
+
         self.step = 0
         observation = None
         episode_reward = None
@@ -122,7 +127,13 @@ class Agent(object):
                     callbacks.on_episode_begin(episode)
 
                     #Sample from list of environments
-                    env_number = np.random.randint(len(envs))
+                    #Sample every switch_rate steps
+                    if(switch_rate != None and context_steps // switch_rate >= 1):
+                        context_steps = context_steps % switch_rate
+                        env_number = np.random.randint(len(envs))
+                    elif(switch_rate == None or envs == [env]):
+                        env_number = 0
+
                     env = envs[env_number]
 
                     callbacks._set_env(env)
@@ -205,6 +216,7 @@ class Agent(object):
                     'info': accumulated_info,
                 }
                 callbacks.on_step_end(episode_step, step_logs)
+                context_steps += 1
                 episode_step += 1
                 self.step += 1
 
@@ -239,7 +251,7 @@ class Agent(object):
 
         return history
 
-    def test(self, env, envs=None, nb_episodes=1, action_repetition=1, callbacks=None, visualize=True,
+    def test(self, env, envs=None, switch_rate=None, nb_episodes=1, action_repetition=1, callbacks=None, visualize=True,
              nb_max_episode_steps=None, nb_max_start_steps=0, start_step_policy=None, verbose=1):
         """Callback that is called before training begins."
         """
@@ -250,6 +262,7 @@ class Agent(object):
 
         self.training = False
         self.step = 0
+        context_steps = 0
 
         callbacks = [] if not callbacks else callbacks[:]
 
@@ -282,7 +295,13 @@ class Agent(object):
         for episode in range(nb_episodes):
 
             #Sample from list of environments
-            env_number = np.random.randint(len(envs))
+            #Sample every switch_rate steps
+            if(switch_rate != None and context_steps // switch_rate >= 1):
+                context_steps = context_steps % switch_rate
+                env_number = np.random.randint(len(envs))
+            elif(switch_rate == None or envs == [env]):
+                env_number = 0
+
             env = envs[env_number]
 
             callbacks._set_env(env)
@@ -363,6 +382,7 @@ class Agent(object):
                 callbacks.on_step_end(episode_step, step_logs)
                 episode_step += 1
                 self.step += 1
+                context_steps += 1
 
             # We are in a terminal state but the agent hasn't yet seen it. We therefore
             # perform one more forward-backward call and simply ignore the action before
