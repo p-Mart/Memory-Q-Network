@@ -122,7 +122,8 @@ class Agent(object):
                     callbacks.on_episode_begin(episode)
 
                     #Sample from list of environments
-                    env = np.random.choice(envs)
+                    env_number = np.random.randint(len(envs))
+                    env = envs[env_number]
 
                     callbacks._set_env(env)
                     episode_step = 0
@@ -167,7 +168,7 @@ class Agent(object):
                 callbacks.on_step_begin(episode_step)
                 # This is were all of the work happens. We first perceive and compute the action
                 # (forward step) and then use the reward to improve (backward step).
-                action = self.forward(observation)
+                action = self.forward(observation, env_number)
                 if self.processor is not None:
                     action = self.processor.process_action(action)
                 reward = 0.
@@ -192,7 +193,7 @@ class Agent(object):
                 if nb_max_episode_steps and episode_step >= nb_max_episode_steps - 1:
                     # Force a terminal state.
                     done = True
-                metrics = self.backward(reward, terminal=done)
+                metrics = self.backward(reward, terminal=done, env_number=env_number)
                 episode_reward += reward
 
                 step_logs = {
@@ -213,8 +214,8 @@ class Agent(object):
                     # resetting the environment. We need to pass in `terminal=False` here since
                     # the *next* state, that is the state of the newly reset environment, is
                     # always non-terminal by convention.
-                    self.forward(observation)
-                    self.backward(0., terminal=False)
+                    self.forward(observation, env_number)
+                    self.backward(0., terminal=False, env_number=env_number)
 
                     # This episode is finished, report and reset.
                     episode_logs = {
@@ -238,7 +239,7 @@ class Agent(object):
 
         return history
 
-    def test(self, env, nb_episodes=1, action_repetition=1, callbacks=None, visualize=True,
+    def test(self, env, envs=None, nb_episodes=1, action_repetition=1, callbacks=None, visualize=True,
              nb_max_episode_steps=None, nb_max_start_steps=0, start_step_policy=None, verbose=1):
         """Callback that is called before training begins."
         """
@@ -251,6 +252,10 @@ class Agent(object):
         self.step = 0
 
         callbacks = [] if not callbacks else callbacks[:]
+
+        #Environment sampling
+        if(envs == None):
+            envs = [env]
 
         if verbose >= 1:
             callbacks += [TestLogger()]
@@ -275,6 +280,13 @@ class Agent(object):
         self._on_test_begin()
         callbacks.on_train_begin()
         for episode in range(nb_episodes):
+
+            #Sample from list of environments
+            env_number = np.random.randint(len(envs))
+            env = envs[env_number]
+
+            callbacks._set_env(env)
+
             callbacks.on_episode_begin(episode)
             episode_reward = 0.
             episode_step = 0
@@ -314,7 +326,7 @@ class Agent(object):
             while not done:
                 callbacks.on_step_begin(episode_step)
 
-                action = self.forward(observation)
+                action = self.forward(observation, env_number)
                 if self.processor is not None:
                     action = self.processor.process_action(action)
                 reward = 0.
@@ -338,7 +350,7 @@ class Agent(object):
                         break
                 if nb_max_episode_steps and episode_step >= nb_max_episode_steps - 1:
                     done = True
-                self.backward(reward, terminal=done)
+                self.backward(reward, terminal=done, env_number=env_number)
                 episode_reward += reward
 
                 step_logs = {
@@ -357,8 +369,8 @@ class Agent(object):
             # resetting the environment. We need to pass in `terminal=False` here since
             # the *next* state, that is the state of the newly reset environment, is
             # always non-terminal by convention.
-            self.forward(observation)
-            self.backward(0., terminal=False)
+            self.forward(observation, env_number)
+            self.backward(0., terminal=False, env_number=env_number)
 
             # Report end of episode.
             episode_logs = {
@@ -376,7 +388,7 @@ class Agent(object):
         """
         pass
 
-    def forward(self, observation):
+    def forward(self, observation, env_number):
         """Takes the an observation from the environment and returns the action to be taken next.
         If the policy is implemented by a neural network, this corresponds to a forward (inference) pass.
 
@@ -388,7 +400,7 @@ class Agent(object):
         """
         raise NotImplementedError()
 
-    def backward(self, reward, terminal):
+    def backward(self, reward, terminal, env_number):
         """Updates the agent after having executed the action returned by `forward`.
         If the policy is implemented by a neural network, this corresponds to a weight update using back-prop.
 

@@ -2,13 +2,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from keras.layers import *
-from keras.models import Model
+from keras.models import Model, load_model
+from keras.callbacks import Callback
 
 from keras.optimizers import RMSprop
 from TemporalMemory import SimpleMemory, SimpleMemoryCell
 from rl.agents.dqn import DQNAgent
 from rl.policy import EpsGreedyQPolicy, LinearAnnealedPolicy
-from rl.memory import SequentialMemory
+from rl.memory import SequentialMemory, Memory
 from rl.callbacks import TrainEpisodeLogger
 
 import gym
@@ -25,12 +26,30 @@ envs = [env,env2,env3,env4,env5,env6]
 
 nb_actions = env.action_space.n
 
-print nb_actions
-print env.observation_space
-
 e_t_size = 16
 context_size = 16
 
+'''
+class EnvDependentMemory(Memory):
+
+    def __init__(self, limit, envs,**kwargs):
+        super(EnvDependentMemory, self).__init__(**kwargs)
+
+        self.context = {}
+
+
+    def sample(self, batch_size, batch_idxs=None):
+'''
+
+
+
+class RandomizeEnvironmentOnEpisode(Callback):
+    def __init__(self, done):
+        super(Callback, self).__init__()
+
+    def on_epoch_end(self, epoch, logs={}):
+        self.model.stop_training=True
+        done[0] = True
 
 def MQNmodel(e_t_size, context_size):
 
@@ -69,7 +88,6 @@ def MQNmodel(e_t_size, context_size):
     print model.summary()
     return model
 
-
 nb_steps_warmup = int(1e5)
 nb_steps = int(1e6)
 
@@ -77,7 +95,8 @@ model = MQNmodel(e_t_size, context_size)
 target_model = MQNmodel(e_t_size, context_size)
 target_model.set_weights(model.get_weights())
 
-experience = SequentialMemory(limit=int(1e5), window_length=1)
+buffer_size = 6e6
+experience = [SequentialMemory(limit=int(buffer_size/len(envs)), window_length=1) for i in range(len(envs))]
 
 policy = LinearAnnealedPolicy(
     inner_policy=EpsGreedyQPolicy(),
@@ -88,16 +107,26 @@ policy = LinearAnnealedPolicy(
     nb_steps=nb_steps_warmup
 )
 
-
 log = TrainEpisodeLogger()
 callbacks = [log]
 
 dqn = DQNAgent(model=model, target_model=target_model, nb_actions=nb_actions, memory=experience,
                             nb_steps_warmup=nb_steps_warmup, target_model_update=0.999, policy=policy)
 dqn.compile(RMSprop(lr=1e-4,clipnorm=20.),metrics=["mae"])
+dqn.fit(env, envs=envs, nb_steps=nb_steps, verbose=0, callbacks=callbacks)
+'''
+for i in range(nb_episodes):
 
-dqn.fit(env, envs=envs, nb_steps=nb_steps, visualize=False, verbose=0, callbacks=callbacks)
+    print "Episode {}:".format(i)
+    dqn.fit(env, nb_steps=max_steps, visualize=False, verbose=0, callbacks=callbacks)
+    print len(log.observations)
+    #if(dqn.nb_steps_warmup > )
 
+    if(done[0] == True):
+        done[0] = False
+        env = np.random.choice(envs)
+'''
+dqn.save_weights('dqn_weights_singlegoal_v2.h5')
 
 ##### Metrics #####
 episodic_reward_means = []

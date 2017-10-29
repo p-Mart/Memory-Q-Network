@@ -47,8 +47,12 @@ class AbstractDQNAgent(Agent):
         self.delta_clip = delta_clip
         self.custom_model_objects = custom_model_objects
 
+        self.memories = memory
         # Related objects.
-        self.memory = memory
+        if(len(memory) > 1):
+            self.memory = memory[0]
+        else:
+            self.memory = memory
 
         # State.
         self.compiled = False
@@ -213,7 +217,10 @@ class DQNAgent(AbstractDQNAgent):
     def update_target_model_hard(self):
         self.target_model.set_weights(self.model.get_weights())
 
-    def forward(self, observation):
+    def forward(self, observation, env_number):
+        #Get correct memory buffer.
+        self.memory = self.memories[env_number]
+
         # Select an action.
         state = self.memory.get_recent_state(observation)
         q_values = self.compute_q_values(state)
@@ -230,8 +237,9 @@ class DQNAgent(AbstractDQNAgent):
 
         return action
 
-    def backward(self, reward, terminal):
+    def backward(self, reward, terminal, env_number):
         # Store most recent experience in memory.
+        self.memory = self.memories[env_number]
         if self.step % self.memory_interval == 0:
             self.memory.append(self.recent_observation, self.recent_action, reward, terminal,
                                training=self.training)
@@ -648,7 +656,7 @@ class NAFAgent(AbstractDQNAgent):
 
         return action
 
-    def backward(self, reward, terminal):
+    def backward(self, reward, terminal, env_number):
         # Store most recent experience in memory.
         if self.step % self.memory_interval == 0:
             self.memory.append(self.recent_observation, self.recent_action, reward, terminal,
