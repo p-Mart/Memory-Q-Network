@@ -6,7 +6,7 @@ import numpy as np
 from keras.callbacks import History
 
 from rl.callbacks import TestLogger, TrainEpisodeLogger, TrainIntervalLogger, Visualizer, CallbackList
-
+import time
 
 class Agent(object):
     """Abstract base class for all implemented agents.
@@ -123,6 +123,7 @@ class Agent(object):
         did_abort = False
         try:
             while self.step < nb_steps:
+                time.sleep(0.05)
                 if observation is None:  # start of a new episode
                     callbacks.on_episode_begin(episode)
 
@@ -270,6 +271,7 @@ class Agent(object):
         if(envs == None):
             envs = [env]
 
+        env_number = 0
         if verbose >= 1:
             callbacks += [TestLogger()]
         if visualize:
@@ -383,7 +385,7 @@ class Agent(object):
                 episode_step += 1
                 self.step += 1
                 context_steps += 1
-
+                time.sleep(0.1)
             # We are in a terminal state but the agent hasn't yet seen it. We therefore
             # perform one more forward-backward call and simply ignore the action before
             # resetting the environment. We need to pass in `terminal=False` here since
