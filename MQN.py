@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from keras.models import load_model
 from keras.optimizers import RMSprop
 from keras.utils import plot_model
+import keras.backend as K
 
 from rl.agents.dqn import DQNAgent
 from rl.policy import EpsGreedyQPolicy, LinearAnnealedPolicy
@@ -20,6 +21,26 @@ from MQNModel import MQNmodel
 #Need better metrics (percent of episodes)
 #Need model saving / loading
 #Need model visualization ability
+
+def visualizeLayer(model, layer, sample):
+    inputs = [K.learning_phase()] + model.inputs
+
+    _output = K.function(inputs, [layer.output])
+    def output(x):
+        return _output([0] + [x])
+
+    output = output(sample)
+    output = np.squeeze(output)
+
+    print output.shape
+    plt.imshow(output[0], cmap='jet')
+    plt.show()
+
+    print output
+    print "Output shape: ", output.shape
+
+
+
 
 def showmetrics(log):
     ##### Metrics #####
@@ -62,7 +83,7 @@ def main(weights_file):
     env = gym.make('MazeF4-v0')
     env2 = gym.make('MazeF1-v0')
     env3 = gym.make('MazeF2-v0')
-    env4 = gym.make('MazeF3-v0')
+    env0 = gym.make('MazeF3-v0')
     env5 = gym.make('Maze5-v0')
     env6 = gym.make('BMaze4-v0')
 
@@ -106,8 +127,13 @@ def main(weights_file):
                             nb_steps_warmup=nb_steps_warmup, target_model_update=target_model_update, policy=policy)
     
     dqn.compile(RMSprop(lr=learning_rate,clipnorm=clipnorm),metrics=["mae"])
-
+    observation = env.reset()
+    observation = np.reshape(observation, ((1,1,6,7)))
+    print observation
+    print dqn.layers[1]
+    visualizeLayer(dqn.model, dqn.layers[1], observation)
     #Load weights if weight file exists.
+    '''
     if os.path.exists(weights_file):
         dqn.load_weights(weights_file)
 
@@ -117,7 +143,7 @@ def main(weights_file):
     #Save weights if weight file does not exist.
     if not os.path.exists(weights_file):
         dqn.save_weights(weights_file)
-
+    '''
     #Visualization Tools
     showmetrics(log)
 
