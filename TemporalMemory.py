@@ -89,8 +89,8 @@ class SimpleMemoryCell(Layer):
 
        # e_t = inputs[:-self.units] # shape=[1xe]
         #h_t = inputs[-self.units:] # shape=[1xm]
-        e_t = inputs[:, :self.units]
-        h_t = inputs[:, self.units:]
+        e_t = inputs[:, :-self.units]
+        h_t = inputs[:, -self.units:]
         
         # states is M_key, M_value
 
@@ -137,9 +137,8 @@ class SimpleMemoryCell(Layer):
         # calculate output from attention probability
         #output = K.dot(K.transpose(at), M_value_tens[0, :, :]) # shape = [1xm]
         #output = K.dot(K.transpose(at), M_value_tens)
-
+        
         output = K.batch_dot(M_value_tens, at, axes=[1,1])
-        print output
         #update states
         M_key.pop(0) # shape = [M-1xm]
         M_value.pop(0) # shape = [M-1xm]

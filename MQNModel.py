@@ -17,16 +17,19 @@ def MQNmodel(e_t_size, context_size, nb_actions):
     '''
     input_layer = Input((1,None,None))
 
-    provider = Conv2D(filters=24, kernel_size=(2,2), padding="same", data_format="channels_first")(input_layer)
-    provider = Conv2D(filters=12, kernel_size=(2,2), padding="same", data_format="channels_first")(provider)
+    provider = Conv2D(filters=3, kernel_size=(1,1), padding="same", data_format="channels_first")(input_layer)
+    provider = Conv2D(filters=32, kernel_size=(2,2), strides=(2,2), padding="valid", data_format="channels_first")(provider)
+    provider = Conv2D(filters=64, kernel_size=(2,2), strides=(1,1), padding="valid", data_format="channels_first")(provider)
+
     provider = GlobalMaxPooling2D(data_format="channels_first")(provider)
 
     e = Dense(e_t_size)(provider)
+    e = Dropout(rate=0.5)(e)
     context = Dense(context_size, activation="linear")(e)
 
     conc = Concatenate()([e, context])
     conc = Reshape((1, -1))(conc)
-    memory = SimpleMemory(context_size, memory_size=11)(conc)
+    memory = SimpleMemory(context_size, memory_size=50)(conc)
 
     output_layer = Dense(context_size, activation="linear")(context)
     output_layer = Reshape((context_size,))(output_layer)

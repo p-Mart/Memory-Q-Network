@@ -11,7 +11,7 @@ from pygame.locals import *
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
-maze = gym.make('Maze5-v0')
+maze = gym.make('IMaze2-v0')
 
 possible_actions = list(range(8))
 #transitions = maze.env.get_all_possible_transitions()
@@ -23,7 +23,7 @@ pygame.mouse.set_visible(0)
 
 action = -1
 t = 0
-for i_episode in range(1):
+for i_episode in range(20):
     observation = maze.reset()
 
     while True:

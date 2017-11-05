@@ -220,7 +220,7 @@ class DQNAgent(AbstractDQNAgent):
     def forward(self, observation, env_number):
         #Get correct memory buffer.
         self.memory = self.memories[env_number]
-
+        
         # Select an action.
         state = self.memory.get_recent_state(observation)
         q_values = self.compute_q_values(state)

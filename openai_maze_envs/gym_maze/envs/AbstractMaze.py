@@ -5,7 +5,8 @@ from gym import error, spaces, utils
 from gym.utils import seeding
 
 from gym_maze import Maze, DARK_MAPPING, PATH_MAPPING, WALL_MAPPING, \
-                                        REWARD_MAPPING, ACTION_LOOKUP
+                                        REWARD_MAPPING, ACTION_LOOKUP, INDICATOR_MAPPING, \
+                                        ANIMAT_MARKER
 
 from gym_maze.utils import get_all_possible_transitions
 
@@ -17,16 +18,19 @@ import sys
 
 logger = logging.getLogger(__name__)
 
-ANIMAT_MARKER = 5
-
-
 class AbstractMaze(gym.Env):
     metadata = {'render.modes': ['human']}
 
     def __init__(self, matrix):
         self.maze = Maze(matrix)
+
         self.pos_x = None
         self.pos_y = None
+        self.ival = -1
+        if hasattr(self, 'ipos'):
+            print self.ipos
+            self.ival = self.maze.matrix[self.ipos[1],self.ipos[0]]
+
         #Minecraft paper stops an episode after 50 steps
         self.steps_taken = 0 
         self.action_space = spaces.Discrete(8)
@@ -51,6 +55,12 @@ class AbstractMaze(gym.Env):
     def _reset(self):
         logger.debug("Resetting the environment")
         self._insert_animat()
+
+        if hasattr(self, 'ipos'):
+            choice = random.choice(INDICATOR_MAPPING)
+            self.maze.matrix[self.ipos[1],self.ipos[0]] = choice
+            self.ival = choice
+
         return self._observe()
 
     def _render(self, mode='human', close=False):
@@ -74,9 +84,25 @@ class AbstractMaze(gym.Env):
     def _observe(self):
         return self.maze.perception(self.pos_x, self.pos_y)
 
+    def rewardCorrect(self, ival, rval):
+        '''Returns if the reward chosen is correct based on the
+        value of the indicator.
+        Returns true if the index of the indicator value is the 
+        same as the index of the reward value, false otherwise.
+        '''
+
+        i_idx = INDICATOR_MAPPING.index(ival)
+        r_idx = REWARD_MAPPING.index(rval)
+
+        return i_idx == r_idx
+
     def _get_reward(self):
         if self.maze.is_reward(self.pos_x, self.pos_y):
-            return 1.
+            rval = self.maze.matrix[self.pos_y,self.pos_x]
+            if(hasattr(self, 'ipos') and not self.rewardCorrect(self.ival,rval)):
+                return -1.
+            else:
+                return 1.   
 
         #Modification as per Minecraft paper:
         return -0.04
@@ -86,6 +112,12 @@ class AbstractMaze(gym.Env):
         #return self.maze.is_reward(self.pos_x, self.pos_y)
         if(self.maze.is_reward(self.pos_x, self.pos_y) or self.steps_taken >= 50):
             self.steps_taken = 0
+
+            if hasattr(self, 'ipos'):
+                choice = random.choice(INDICATOR_MAPPING)
+                self.maze.matrix[self.ipos[1],self.ipos[0]] = choice
+                self.ival = choice
+
             return True
         else:
             return False
@@ -152,9 +184,14 @@ class AbstractMaze(gym.Env):
         return animat_moved
 
     def _insert_animat(self):
-        possible_coords = self.maze.get_possible_insertion_coordinates()
+        starting_position = None
 
-        starting_position = random.choice(possible_coords)
+        if(hasattr(self, 'apos')):
+            starting_position = self.apos
+        else:
+            possible_coords = self.maze.get_possible_insertion_coordinates()
+            starting_position = random.choice(possible_coords)
+
         self.pos_x = starting_position[0]
         self.pos_y = starting_position[1]
 
@@ -168,8 +205,14 @@ class AbstractMaze(gym.Env):
             return utils.colorize(u'█', 'white')
         elif el == PATH_MAPPING:
             return utils.colorize('.', 'white')
-        elif el == REWARD_MAPPING:
-            return utils.colorize('$', 'green')
+        elif el == REWARD_MAPPING[0]:
+            return utils.colorize('$', 'red')
+        elif el == REWARD_MAPPING[1]:
+            return utils.colorize('$', 'blue')
+        elif el == INDICATOR_MAPPING[0]:
+            return utils.colorize('#', 'red')
+        elif el == INDICATOR_MAPPING[1]:
+            return utils.colorize('#', 'blue')
         elif el == ANIMAT_MARKER:
             return utils.colorize('A', 'red')
         elif el == DARK_MAPPING:

@@ -3,7 +3,8 @@ import logging
 from gym.envs.registration import register
 
 from .Maze import Maze
-from .Maze import PATH_MAPPING, WALL_MAPPING, REWARD_MAPPING, DARK_MAPPING
+from .Maze import PATH_MAPPING, WALL_MAPPING, REWARD_MAPPING, \
+                                DARK_MAPPING, INDICATOR_MAPPING, ANIMAT_MARKER
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +26,6 @@ def find_action_by_direction(direction):
             return key
 
 #Need to write a handler so that these don't get re-registered.
-
 register(
     id='MazeF1-v0',
     entry_point='gym_maze.envs:MazeF1',
@@ -67,4 +67,20 @@ register(
     #max_episode_steps=50,
     #nondeterministic=False
 )
+
+register(
+    id='IMaze2-v0',
+    entry_point='gym_maze.envs:IMaze2',
+    #max_episode_steps=50,
+    #nondeterministic=False
+)
+
+register(
+    id='IMaze9-v0',
+    entry_point='gym_maze.envs:IMaze9',
+    #max_episode_steps=50,
+    #nondeterministic=False
+)
+
+
 

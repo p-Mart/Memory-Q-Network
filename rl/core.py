@@ -123,7 +123,7 @@ class Agent(object):
         did_abort = False
         try:
             while self.step < nb_steps:
-                time.sleep(0.05)
+                #time.sleep(0.05)
                 if observation is None:  # start of a new episode
                     callbacks.on_episode_begin(episode)
 
@@ -348,6 +348,7 @@ class Agent(object):
                 callbacks.on_step_begin(episode_step)
 
                 action = self.forward(observation, env_number)
+                
                 if self.processor is not None:
                     action = self.processor.process_action(action)
                 reward = 0.

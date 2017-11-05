@@ -1,13 +1,16 @@
 import logging
 from utils import raycastLine
 import numpy as np
+import random
 
 logger = logging.getLogger(__name__)
 
 DARK_MAPPING = 2
 PATH_MAPPING = 0
 WALL_MAPPING = 1
-REWARD_MAPPING = 9
+REWARD_MAPPING = [3, 4]
+INDICATOR_MAPPING = [5, 6]
+ANIMAT_MARKER = 7
 
 
 class Maze:
@@ -60,6 +63,7 @@ class Maze:
             perception[point[1], point[0]] = DARK_MAPPING
 
         #print perception
+        perception[pos_y,pos_x] = ANIMAT_MARKER
 
         return perception
     
@@ -129,7 +133,9 @@ class Maze:
         return self.matrix[pos_y, pos_x] == PATH_MAPPING
 
     def is_reward(self, pos_x, pos_y):
-        return self.matrix[pos_y, pos_x] == REWARD_MAPPING
+        #choice = random.randint(0, 2)
+        #if(self.matrix[pos_y, pos_x] == REWARD_MAPPING[choice])
+        return self.matrix[pos_y, pos_x] in REWARD_MAPPING
 
     def _within_x_range(self, x):
         return 0 <= x < self.max_x
