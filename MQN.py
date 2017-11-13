@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from keras.models import load_model
-from keras.optimizers import RMSprop
+from keras.optimizers import RMSprop, Adam
 from keras.utils import plot_model
 import keras.backend as K
 
@@ -16,6 +16,7 @@ from rl.callbacks import TrainEpisodeLogger
 import gym
 from openai_maze_envs import gym_maze
 from MQNModel import MQNmodel
+from DQNModel import DQNmodel
 
 #Need to update environment to have indicator tiles
 #Need better metrics (percent of episodes)
@@ -98,32 +99,42 @@ def main(weights_file):
     #envs = [env,env2,env3,env4,env5,env6]
     
     #env = gym.make('BMaze4-v0')
-    env = gym.make('IMaze2-v0')
+    env = gym.make('IMaze3-v1')
 
     envs = [env]
     #Setting hyperparameters.
     nb_actions = env.action_space.n
-    e_t_size = 256
-    context_size = 256
-    nb_steps_warmup = int(1e5)
-    nb_steps = int(1e6)
+    e_t_size = 128
+    context_size = 128
+    nb_steps_warmup = int(5e4)
+    nb_steps = int(4e6)
     buffer_size = 5e4
-    learning_rate = 2e-4
+    learning_rate = 25e-5
     target_model_update = 0.999
     clipnorm = 20.
     switch_rate = 50
+    window_length = 12
 
     #Callbacks
     log = TrainEpisodeLogger()
     callbacks = [log]
 
-    #Initialize our model.
-    model = MQNmodel(e_t_size, context_size, nb_actions)
-    target_model = MQNmodel(e_t_size, context_size, nb_actions)
+    #Initialize our MQN model.
+    
+    model = MQNmodel(e_t_size, context_size, window_length, nb_actions)
+    target_model = MQNmodel(e_t_size, context_size, window_length, nb_actions)
     target_model.set_weights(model.get_weights())
+    
+    #DQN
+    #model = DQNmodel(nb_actions, window_length, input_shape=env.maze.matrix.shape)
+    #target_model = DQNmodel(nb_actions, window_length, input_shape=env.maze.matrix.shape)
+    #target_model.set_weights(model.get_weights())
 
     #Initialize memory buffer and policy for DQN algorithm.
-    experience = [SequentialMemory(limit=int(buffer_size/len(envs)), window_length=1) for i in range(len(envs))]
+    experience = [SequentialMemory(limit=int(buffer_size/len(envs)), window_length=window_length)
+                             for i in range(len(envs))]
+
+    #experience = [SequentialMemory(limit=int(buffer_size), window_length=1)]
 
     policy = LinearAnnealedPolicy(
         inner_policy=EpsGreedyQPolicy(),
@@ -131,7 +142,7 @@ def main(weights_file):
         value_max=1.0,
         value_min=0.1,
         value_test=0.,
-        nb_steps=nb_steps_warmup
+        nb_steps=7e4
     )
 
     #Initialize and compile the DQN agent.
@@ -139,7 +150,7 @@ def main(weights_file):
                             nb_steps_warmup=nb_steps_warmup, target_model_update=target_model_update, policy=policy,
                             batch_size=32)
     
-    dqn.compile(RMSprop(lr=learning_rate,clipnorm=clipnorm),metrics=["mae"])
+    dqn.compile(Adam(lr=learning_rate,clipnorm=clipnorm),metrics=["mae"])
     observation = env.reset()
     #print env.maze.matrix.shape
     observation = np.reshape(observation, ((1,1,) + env.maze.matrix.shape))
@@ -147,13 +158,17 @@ def main(weights_file):
     #print dqn.layers[1]
     #Load weights if weight file exists.
     
+
+
+
     if os.path.exists(weights_file):
         dqn.load_weights(weights_file)
 
     
+
     #Train DQN in environment.
-    dqn.fit(env, nb_steps=nb_steps, verbose=0, callbacks=callbacks)
-    #dqn.test(env, nb_episodes=10,visualize=True)
+    #dqn.fit(env, nb_steps=nb_steps, verbose=0, callbacks=callbacks)
+    dqn.test(env, nb_episodes=100,visualize=True)
 
     #Save weights if weight file does not exist.
     
@@ -163,7 +178,8 @@ def main(weights_file):
     #Visualization Tools
     showmetrics(log)
     visualizeLayer(dqn.model, dqn.layers[1], observation)
-
+    visualizeLayer(dqn.model, dqn.layers[2], observation)
+    visualizeLayer(dqn.model, dqn.layers[3], observation)
 
     return
 

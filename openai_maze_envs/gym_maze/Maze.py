@@ -5,11 +5,11 @@ import random
 
 logger = logging.getLogger(__name__)
 
-DARK_MAPPING = 2
-PATH_MAPPING = 0
-WALL_MAPPING = 1
-REWARD_MAPPING = [3, 4]
-INDICATOR_MAPPING = [5, 6]
+DARK_MAPPING = 0
+PATH_MAPPING = 1
+WALL_MAPPING = 2
+REWARD_MAPPING = [3, -3]
+INDICATOR_MAPPING = [5, -5]
 ANIMAT_MARKER = 7
 
 
@@ -58,12 +58,13 @@ class Maze:
         all_points = set([(x,y) for y in range(self.max_y) for x in range(self.max_x)])
         #print "Set of visible points\n", visible_points
         #print "Set of non-visible points\n", all_points - visible_points
-
+        
         for point in (all_points - visible_points):
             perception[point[1], point[0]] = DARK_MAPPING
-
+        
         #print perception
         perception[pos_y,pos_x] = ANIMAT_MARKER
+        perception = np.expand_dims(perception, axis=2)
 
         return perception
     
