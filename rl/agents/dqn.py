@@ -59,6 +59,11 @@ class AbstractDQNAgent(Agent):
 
     def process_state_batch(self, batch):
         batch = np.array(batch)
+        '''
+        if(batch.shape[0] != self.batch_size):
+            zeros = np.zeros((self.batch_size - 1,) + batch.shape[1:])
+            batch = np.concatenate((zeros, batch))
+        '''
         if self.processor is None:
             return batch
         return self.processor.process_state_batch(batch)
@@ -71,6 +76,7 @@ class AbstractDQNAgent(Agent):
 
     def compute_q_values(self, state):
         q_values = self.compute_batch_q_values([state]).flatten()
+        #q_values = self.compute_batch_q_values([state])[-1].flatten()
         assert q_values.shape == (self.nb_actions,)
         return q_values
 
@@ -100,7 +106,7 @@ class DQNAgent(AbstractDQNAgent):
         # Validate (important) input.
         if hasattr(model.output, '__len__') and len(model.output) > 1:
             raise ValueError('Model "{}" has more than one output. DQN expects a model that has a single output.'.format(model))
-        if model.output._keras_shape != (None, self.nb_actions):
+        if model.output._keras_shape[1] != self.nb_actions:
             raise ValueError('Model output "{}" has invalid shape. DQN expects a model that has one dimension for each action, in this case {}.'.format(model.output, self.nb_actions))
 
         # Parameters.
@@ -223,6 +229,8 @@ class DQNAgent(AbstractDQNAgent):
         
         # Select an action.
         state = self.memory.get_recent_state(observation)
+        #state = [observation]
+
         q_values = self.compute_q_values(state)
         if self.training:
             action = self.policy.select_action(q_values=q_values)

@@ -11,10 +11,10 @@ import keras.backend as K
 from rl.agents.dqn import DQNAgent
 from rl.policy import EpsGreedyQPolicy, LinearAnnealedPolicy
 from rl.memory import SequentialMemory, Memory
-from rl.callbacks import TrainEpisodeLogger
+from rl.callbacks import TrainEpisodeLogger, TestLogger
 
 import gym
-from openai_maze_envs import gym_maze
+#from openai_maze_envs import gym_maze
 from MQNModel import MQNmodel
 from DQNModel import DQNmodel
 
@@ -48,8 +48,6 @@ def visualizeLayer(model, layer, sample):
     #print "Output shape: ", output.shape
 
 
-
-
 def showmetrics(log):
     ##### Metrics #####
     episodic_reward_means = []
@@ -68,9 +66,20 @@ def showmetrics(log):
             if(name == "mean_q" and val != '--'):
                 episodic_mean_q.append(val)
 
-    #Running average
+    #Windowed Mean
     #episodic_reward_means = (np.cumsum(episodic_reward_means)  
-                                                #/ (np.arange(len(episodic_reward_means)) + 1))
+    #                                           / (np.arange(len(episodic_reward_means)) + 1))
+
+
+    window_size = 50
+    averaged_rewards = []
+    for i in range(0, len(episodic_reward_means), window_size):
+
+        window = episodic_reward_means[i:i+window_size]
+        temp_sum = np.sum(episodic_reward_means[i:i+window_size])
+
+        averaged_rewards.append(temp_sum / window_size)
+
 
     plt.figure(1)
     plt.subplot(311)
@@ -83,46 +92,39 @@ def showmetrics(log):
 
     plt.subplot(313)
     plt.title("Reward")
-    plt.plot(episodic_reward_means, 'g')
+    plt.plot(averaged_rewards, 'g')
     plt.show()
 
 def main(weights_file):
     #Initialize maze environments.
-    
-    #env = gym.make('MazeF4-v0')
-    #env2 = gym.make('MazeF1-v0')
-    #env3 = gym.make('MazeF2-v0')
-    #env4 = gym.make('MazeF3-v0')
-    #env5 = gym.make('Maze5-v0')
-    #env6 = gym.make('BMaze4-v0')
+    #env1 = gym.make('IMaze2-v0')
+    #env2 = gym.make('IMaze3-v0')
+    #env3 = gym.make('IMaze6-v0')
+    env4 = gym.make('IMaze8-v0')
 
-    #envs = [env,env2,env3,env4,env5,env6]
-    
-    #env = gym.make('BMaze4-v0')
-    env = gym.make('IMaze3-v1')
+    envs = [env4]
 
-    envs = [env]
     #Setting hyperparameters.
-    nb_actions = env.action_space.n
-    e_t_size = 128
-    context_size = 128
-    nb_steps_warmup = int(5e4)
-    nb_steps = int(4e6)
+    nb_actions = env4.action_space.n
+    e_t_size = 256
+    context_size = 256
+    nb_steps_warmup = int(8e4)
+    nb_steps = int(1e6)
     buffer_size = 5e4
-    learning_rate = 25e-5
+    learning_rate = 1e-4
     target_model_update = 0.999
-    clipnorm = 20.
-    switch_rate = 50
+    clipnorm = 5.
+    switch_rate = 200
     window_length = 12
-
+    batch_size = 32
     #Callbacks
     log = TrainEpisodeLogger()
     callbacks = [log]
 
     #Initialize our MQN model.
     
-    model = MQNmodel(e_t_size, context_size, window_length, nb_actions)
-    target_model = MQNmodel(e_t_size, context_size, window_length, nb_actions)
+    model = MQNmodel(e_t_size, context_size, batch_size, window_length, nb_actions)
+    target_model = MQNmodel(e_t_size, context_size, batch_size, window_length, nb_actions)
     target_model.set_weights(model.get_weights())
     
     #DQN
@@ -142,33 +144,24 @@ def main(weights_file):
         value_max=1.0,
         value_min=0.1,
         value_test=0.,
-        nb_steps=7e4
+        nb_steps=1e5
     )
 
     #Initialize and compile the DQN agent.
     dqn = DQNAgent(model=model, target_model=target_model, nb_actions=nb_actions, memory=experience,
                             nb_steps_warmup=nb_steps_warmup, target_model_update=target_model_update, policy=policy,
-                            batch_size=32)
+                            batch_size=batch_size)
     
-    dqn.compile(Adam(lr=learning_rate,clipnorm=clipnorm),metrics=["mae"])
-    observation = env.reset()
-    #print env.maze.matrix.shape
-    observation = np.reshape(observation, ((1,1,) + env.maze.matrix.shape))
-    #print observation
-    #print dqn.layers[1]
+    dqn.compile(RMSprop(lr=learning_rate,clipnorm=clipnorm),metrics=["mae"])
+
     #Load weights if weight file exists.
-    
-
-
 
     if os.path.exists(weights_file):
         dqn.load_weights(weights_file)
 
-    
-
     #Train DQN in environment.
-    #dqn.fit(env, nb_steps=nb_steps, verbose=0, callbacks=callbacks)
-    dqn.test(env, nb_episodes=100,visualize=True)
+    dqn.fit(env4, nb_steps=nb_steps, verbose=0, callbacks=callbacks)
+    #history = dqn.test(env, nb_episodes=10000,visualize=False,verbose=1)
 
     #Save weights if weight file does not exist.
     
@@ -177,9 +170,14 @@ def main(weights_file):
     
     #Visualization Tools
     showmetrics(log)
-    visualizeLayer(dqn.model, dqn.layers[1], observation)
-    visualizeLayer(dqn.model, dqn.layers[2], observation)
-    visualizeLayer(dqn.model, dqn.layers[3], observation)
+
+    #rewards = np.array(history.history['episode_reward'])
+    #accuracy = np.mean(rewards > 0.)
+    #print accuracy
+
+    #visualizeLayer(dqn.model, dqn.layers[1], observation)
+    #visualizeLayer(dqn.model, dqn.layers[2], observation)
+    #visualizeLayer(dqn.model, dqn.layers[3], observation)
 
     return
 

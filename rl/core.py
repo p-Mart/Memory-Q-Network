@@ -386,7 +386,7 @@ class Agent(object):
                 episode_step += 1
                 self.step += 1
                 context_steps += 1
-                time.sleep(0.1)
+                #time.sleep(0.1)
             # We are in a terminal state but the agent hasn't yet seen it. We therefore
             # perform one more forward-backward call and simply ignore the action before
             # resetting the environment. We need to pass in `terminal=False` here since

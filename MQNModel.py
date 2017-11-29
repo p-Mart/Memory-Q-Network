@@ -5,7 +5,7 @@ import keras.backend as K
 
 from TemporalMemory import SimpleMemory, SimpleMemoryCell
 
-def MQNmodel(e_t_size, context_size, window_length, nb_actions):
+def MQNmodel(e_t_size, context_size, batch_size, window_length, nb_actions):
     '''
     Architecture of the MQN.
     Initialize by calling:
@@ -17,8 +17,7 @@ def MQNmodel(e_t_size, context_size, window_length, nb_actions):
     nb_actions is the number of actions
     in the environment.
     '''
-    input_layer = Input((window_length,7, 7,1))
-    
+    input_layer = Input((window_length,7, 12,1))
     provider = Conv3D(filters=12, kernel_size=(1,2,2), strides=(1,2,2), padding="valid")(input_layer)
     provider = Conv3D(filters=24, kernel_size=(1,2,2), strides=(1,1,1), padding="valid")(provider)
 
@@ -31,16 +30,16 @@ def MQNmodel(e_t_size, context_size, window_length, nb_actions):
 
     conc = Concatenate()([e, context])
 
-    memory = SimpleMemory(context_size, memory_size=24, return_sequences=True)(conc)
+    memory = SimpleMemory(context_size, memory_size=12, return_sequences=True)(conc)
     output_layer = Dense(context_size, activation="linear")(context)
     #output_layer = Reshape((context_size,))(output_layer)
     output_layer = Lambda(lambda x: K.relu(x[0] + x[1]))([output_layer, memory])
     output_layer = Dropout(rate=0.5)(output_layer)
     output_layer = Flatten()(output_layer)
+    #output_layer = Reshape((batch_size*context_size,))(output_layer)
     output_layer = Dense(nb_actions, activation="linear")(output_layer)
-
 
     model = Model(inputs=input_layer, outputs=output_layer)
     print model.summary()
-    plot_model(model, to_file='model.png')
+
     return model

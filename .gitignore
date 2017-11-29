@@ -1,6 +1,4 @@
 # Ignore .pyc files
 *.pyc
 *.h5
-openai_maze_envs/build/
-openai_maze_envs/dist/
-openai_maze_envs/gym_maze.egg-info/
+*.png
