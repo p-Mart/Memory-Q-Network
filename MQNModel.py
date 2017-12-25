@@ -18,11 +18,18 @@ def MQNmodel(e_t_size, context_size, batch_size, window_length, nb_actions, obs_
     nb_actions is the number of actions
     in the environment.
     '''
+    '''
     input_layer = Input((window_length,7, 12,1))
     provider = Conv3D(filters=12, kernel_size=(1,2,2), strides=(1,2,2), padding="valid")(input_layer)
     provider = Conv3D(filters=24, kernel_size=(1,2,2), strides=(1,1,1), padding="valid")(provider)
 
     provider = Reshape((window_length,-1))(provider)
+
+    e = Dense(e_t_size)(provider)
+    e = Dropout(rate=0.5)(e)
+    '''
+    input_layer = Input((window_length,))
+    provider = Reshape((window_length,-1))(input_layer)
 
     e = Dense(e_t_size)(provider)
     e = Dropout(rate=0.5)(e)

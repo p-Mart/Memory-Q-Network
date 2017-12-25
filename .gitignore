@@ -3,5 +3,3 @@ human_test.py
 *.pyc
 rl/*.pyc
 rl/agents/*.pyc
-*.h5
-*.png
