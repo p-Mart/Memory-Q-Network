@@ -1,0 +1,6 @@
+e_t and context are size 128
+51 atoms on the output layer
+learning rate is 1e-3
+warmup phase is 5e4
+temporal memory size is 12
+
