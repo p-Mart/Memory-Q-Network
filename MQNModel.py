@@ -38,7 +38,7 @@ def MQNmodel(e_t_size, context_size, batch_size, window_length, nb_actions, obs_
 
     conc = Concatenate()([e, context])
 
-    memory = SimpleMemory(context_size, memory_size=12, return_sequences=True)(conc)
+    memory = SimpleMemory(context_size, memory_size=24, return_sequences=True)(conc)
     output_layer = Dense(context_size, activation="linear")(context)
     #output_layer = Reshape((context_size,))(output_layer)
     output_layer = Lambda(lambda x: K.relu(x[0] + x[1]))([output_layer, memory])
@@ -53,14 +53,14 @@ def MQNmodel(e_t_size, context_size, batch_size, window_length, nb_actions, obs_
     return model
 
 def DistributionalMQNModel(e_t_size, context_size, window_length, nb_actions, nb_atoms, obs_dimensions):
-    #input_layer = Input((window_length,7, 12,1))
-    #provider = Conv3D(filters=12, kernel_size=(1,2,2), strides=(1,2,2), padding="valid")(input_layer)
-    #provider = Conv3D(filters=24, kernel_size=(1,2,2), strides=(1,1,1), padding="valid")(provider)
+    input_layer = Input((window_length,7, 12,1))
+    provider = Conv3D(filters=12, kernel_size=(1,2,2), strides=(1,2,2), padding="valid")(input_layer)
+    provider = Conv3D(filters=24, kernel_size=(1,2,2), strides=(1,1,1), padding="valid")(provider)
 
-    #provider = Reshape((window_length,-1))(provider)
+    provider = Reshape((window_length,-1))(provider)
 
-    input_layer = Input((window_length,))
-    provider = Reshape((window_length,-1))(input_layer)
+    #input_layer = Input((window_length,))
+    #provider = Reshape((window_length,-1))(input_layer)
 
     e = Dense(e_t_size)(provider)
     e = Dropout(rate=0.5)(e)
