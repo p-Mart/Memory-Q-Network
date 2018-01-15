@@ -25,6 +25,7 @@ If you specify `test` then the model will be tested on an environment without an
 OpenAI Gym is packaged as part of the repo - this was for portability reasons. It's also easier to make new environments this way.
 
 ## TODO:
+* Change naming conventions for cmd. line args ([weights_name].h5 should just be [model_name])
 * Automatic model initialization from hyperparameters
 * A `setup.py` to easily install dependencies
 * Test mode callbacks / data recording
