@@ -1,4 +1,6 @@
 # Ignore .pyc files
-*.pyc
+human_test.py
 *.h5
-*.png
+*.pyc
+rl/*.pyc
+rl/agents/*.pyc

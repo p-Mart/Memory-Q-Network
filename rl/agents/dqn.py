@@ -376,7 +376,7 @@ class DistributionalDQNAgent(AbstractDQNAgent):
         Adapted from https://github.com/flyyufelix/C51-DDQN-Keras/blob/master/c51_ddqn.py
         https://flyyufelix.github.io/2017/10/24/distributional-bellman.html
     """
-    def __init__(self, model, target_model,  num_atoms, policy=None, test_policy=None, enable_double_dqn=True, enable_dueling_network=False,
+    def __init__(self, model, target_model,  num_atoms, v_min, v_max, policy=None, test_policy=None, enable_double_dqn=True, enable_dueling_network=False,
                  dueling_type='avg', *args, **kwargs):
         super(DistributionalDQNAgent, self).__init__(*args, **kwargs)
 
@@ -429,8 +429,8 @@ class DistributionalDQNAgent(AbstractDQNAgent):
 
         #Atoms for Distributional Bellman
         self.num_atoms = num_atoms
-        self.v_max = 1. #Max score for maze environment
-        self.v_min = -1. #Min score for maze environment
+        self.v_max = v_max
+        self.v_min = v_min
         self.delta_z = (self.v_max - self.v_min) / float(self.num_atoms - 1)
 
         #Supports for projecting the expected distribution
@@ -456,10 +456,11 @@ class DistributionalDQNAgent(AbstractDQNAgent):
         # We never train the target model, hence we can set the optimizer and loss arbitrarily.
         ###Phillip wuz here###
         #self.target_model = clone_model(self.model, self.custom_model_objects)
-        self.target_model.compile(optimizer='sgd', loss='mse')
-        self.model.compile(optimizer='sgd', loss='mse')
+        self.target_model.compile(loss='categorical_crossentropy',optimizer=optimizer)
+        self.model.compile(loss='categorical_crossentropy',optimizer=optimizer)
 
         # Compile model.
+        '''
         if self.target_model_update < 1.:
             # We use the `AdditionalUpdatesOptimizer` to efficiently soft-update the target model.
             updates = get_soft_target_model_updates(self.target_model, self.model, self.target_model_update)
@@ -470,7 +471,7 @@ class DistributionalDQNAgent(AbstractDQNAgent):
             loss = huber_loss(y_true, y_pred, self.delta_clip)
             loss *= mask  # apply element-wise mask
             return K.sum(loss, axis=-1)
-
+        '''
         # Create trainable model. The problem is that we need to mask the output since we only
         # ever want to update the Q values for a certain action. The way we achieve this is by
         # using a custom Lambda layer that computes the loss. This gives us the necessary flexibility
@@ -601,6 +602,7 @@ class DistributionalDQNAgent(AbstractDQNAgent):
             assert q_batch.shape == (self.batch_size,)
             '''
 
+            #print state1_batch
             z = self.model.predict_on_batch(state1_batch)
             z_ = self.target_model.predict_on_batch(state1_batch)
 
@@ -636,7 +638,8 @@ class DistributionalDQNAgent(AbstractDQNAgent):
                         m_prob[action_batch[i]][i][int(m_l)] += z_[actions[i]][i][j] * (m_u - bj)
                         m_prob[action_batch[i]][i][int(m_u)] += z_[actions[i]][i][j] * (bj - m_l)
 
-
+            #print state0_batch
+            #print m_prob
             metrics = self.model.train_on_batch(state0_batch, m_prob)
             #print metrics
 
