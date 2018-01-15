@@ -20,7 +20,7 @@ If you specify `test` then the model will be tested on an environment without an
 * Matplotlib
 * Seaborn
 * h5py
-(might be more)
+* (might be more)
 
 OpenAI Gym is packaged as part of the repo - this was for portability reasons. It's also easier to make new environments this way.
 
