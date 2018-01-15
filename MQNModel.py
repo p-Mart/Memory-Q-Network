@@ -19,6 +19,7 @@ def MQNmodel(e_t_size, context_size, batch_size, window_length, nb_actions, obs_
     in the environment.
     '''
     '''
+    #This is for the maze environment.
     input_layer = Input((window_length,7, 12,1))
     provider = Conv3D(filters=12, kernel_size=(1,2,2), strides=(1,2,2), padding="valid")(input_layer)
     provider = Conv3D(filters=24, kernel_size=(1,2,2), strides=(1,1,1), padding="valid")(provider)

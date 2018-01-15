@@ -21,10 +21,20 @@ from MQNModel import MQNmodel, DistributionalMQNModel
 from DQNModel import DQNmodel
 from utilities import *
 
+"""
+    Todo : *Add environment as an input option?
+               *Automatic model loading / initialization
+                   from hyperparams.txt, model_name.h5.
+    
+               *As part of the above, possibly need to contain
+                   hyperparameters as part of a dictionary that
+                   can be used to automate the initilization process;
+                   this might even include the class name 
+                   (MQNModel, etc.). Would be a useful tool when
+                   running large amounts of automated tests later.
+"""
+
 def main(weights_file, options):
-    ###Todo : *Add environment as an input option?
-    ###           *Automatic model loading / initialization
-    ###               from hyperparams.txt, model_name.h5.
 
     #Initialize maze environments.
     env = gym.make('IMaze3-v0')
@@ -169,7 +179,8 @@ if __name__ == "__main__":
             weights_file = sys.argv[1]
             
             mode = sys.argv[2]
-            if mode != "train" or mode != "test":
+
+            if mode != "train" and mode != "test":
                 print "Usage: python MQN.py [weight_filename].h5 [train | test]"
                 sys.exit()
 
