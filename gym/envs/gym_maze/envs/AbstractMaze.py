@@ -74,7 +74,12 @@ class AbstractMaze(gym.Env):
             outfile.write("\n")
 
             situation = np.copy(self.maze.perception(self.pos_x, self.pos_y))
-            situation[self.pos_y, self.pos_x] = ANIMAT_MARKER
+            situation = np.array([
+                [situation[7], situation[0], situation[1]],
+                [situation[6], ANIMAT_MARKER, situation[2]],
+                [situation[5], situation[4], situation[3]]], dtype=np.int8)
+
+            #situation[self.pos_y, self.pos_x] = ANIMAT_MARKER
 
             for row in situation:
                 outfile.write("".join(self._render_element(el) for el in row))
