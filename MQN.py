@@ -57,6 +57,7 @@ def main(model_name, options):
     switch_rate = 50
     window_length = 12
     memory_size = None
+    batch_size = 64
 
     # Callbacks
     log = TrainEpisodeLogger()
@@ -127,7 +128,7 @@ def main(model_name, options):
         target_model_update=target_model_update, 
         policy=policy,
         #processor=processor,
-        batch_size=32
+        batch_size=batch_size
     )
     
 
@@ -174,7 +175,8 @@ def main(model_name, options):
             window_length=window_length,
             nb_atoms=nb_atoms,
             v_min=v_min,
-            v_max=v_max
+            v_max=v_max,
+            batch_size=batch_size
         )
 
         # Save weights.
@@ -213,5 +215,5 @@ if __name__ == "__main__":
         print "Usage: python MQN.py [model_name].h5 [train | test]"
         sys.exit()
 
-    with tf.device("/gpu:0"):
-        main(model_name, options)
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0, 1"
+    main(model_name, options)
