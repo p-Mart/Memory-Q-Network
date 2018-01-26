@@ -1,7 +1,7 @@
 from keras.layers import *
 from keras.models import Model
 
-def DQNmodel(nb_actions, window_length, input_shape):
+def DQNmodel(nb_actions, window_length, h_size, maze_dim):
     '''
     Architecture of the MQN.
     Initialize by calling:
@@ -14,24 +14,25 @@ def DQNmodel(nb_actions, window_length, input_shape):
     in the environment. 
     '''
 
-
-    #provider = Conv3D(filters=12, kernel_size=(1,2,2), strides=(1,2,2), padding="valid")(input_layer)
-    #provider = Conv3D(filters=24, kernel_size=(1,2,2), strides=(1,1,1), padding="valid")(provider)
+    input_layer = Input((window_length, maze_dim[0], maze_dim[1],1))
+    provider = Conv3D(filters=12, kernel_size=(1,2,2), strides=(1,2,2), padding="valid")(input_layer)
+    provider = Conv3D(filters=24, kernel_size=(1,2,2), strides=(1,1,1), padding="valid")(provider)
     #e = Flatten()(input_layer)
     #e = Dense(512)(e)
     #provider = Flatten()(provider)
 
-    input_layer = Input((window_length,))
-    provider = Reshape((window_length,-1))(input_layer)
+    provider = Reshape((window_length,-1))(provider)
 
-    e = Dense(512)(provider)
-    e = Dropout(rate=0.5)(e)
-    e = Dense(512)(e)
-    e = Dropout(rate=0.5)(e)
+    e = Dense(h_size, activation=PReLU())(provider)
+    e = Dropout(0.5)(e)
+    e = Dense(h_size, activation=PReLU())(e)
+    e = Dropout(0.5)(e)
+    e = Flatten()(e)
     e = Dense(nb_actions, activation='linear')(e)
-
+    e = Dropout(0.5)(e)
 
     model = Model(inputs=input_layer, outputs=e)
+    print model.summary()
     return model
 
 

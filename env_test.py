@@ -10,7 +10,7 @@ from pygame.locals import *
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
-maze = gym.make('IMaze2-v0')
+maze = gym.make('IMaze6-v0')
 
 possible_actions = list(range(8))
 #transitions = maze.env.get_all_possible_transitions()
@@ -34,11 +34,11 @@ for i_episode in range(20):
                     if (event.key == K_UP):
                         action = 0
                     elif(event.key == K_RIGHT):
-                        action = 2
+                        action = 1
                     elif(event.key == K_DOWN):
-                        action = 4
+                        action = 2
                     elif(event.key == K_LEFT):
-                        action = 6
+                        action = 3
 
         #action = choice(possible_actions)
         logger.info("\t\tExecuted action: [{}]".format(action))

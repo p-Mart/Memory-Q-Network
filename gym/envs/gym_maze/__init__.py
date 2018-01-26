@@ -8,6 +8,8 @@ from .Maze import PATH_MAPPING, WALL_MAPPING, REWARD_MAPPING, \
 
 logger = logging.getLogger(__name__)
 
+'''
+Old action lookup for diagonal movement
 ACTION_LOOKUP = {
     0: 'N',
     1: 'NE',
@@ -17,6 +19,14 @@ ACTION_LOOKUP = {
     5: 'SW',
     6: 'W',
     7: 'NW'
+}
+'''
+#Disabled diagonal movement.
+ACTION_LOOKUP = {
+    0: 'N',
+    1: 'E',
+    2: 'S',
+    3: 'W'
 }
 
 

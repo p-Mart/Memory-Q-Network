@@ -41,7 +41,7 @@ class Maze:
                     possible_cords.append((x, y))
 
         return possible_cords
-    '''
+
     def perception(self, pos_x, pos_y):
         #Run the Bresenham line algorithm in a square pattern,
         #along the boundary of the maze. This is to simulate 
@@ -67,8 +67,8 @@ class Maze:
         perception = np.expand_dims(perception, axis=2)
 
         return perception
+
     '''
-    
     def perception(self, pos_x, pos_y):
         if not self._within_x_range(pos_x):
             raise ValueError('X position not within allowed range')
@@ -125,7 +125,7 @@ class Maze:
             nw = str(self.matrix[pos_y - 1, pos_x - 1])
 
         return n, ne, e, se, s, sw, w, nw
-    
+    '''
 
     def is_wall(self, pos_x, pos_y):
         return self.matrix[pos_y, pos_x] == WALL_MAPPING

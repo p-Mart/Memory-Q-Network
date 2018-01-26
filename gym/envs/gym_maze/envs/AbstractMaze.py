@@ -23,9 +23,13 @@ class AbstractMaze(gym.Env):
 
     def __init__(self, matrix):
         self.maze = Maze(matrix)
+        self.maze_dim = matrix.shape
 
         self.pos_x = None
         self.pos_y = None
+        self.previous_pos_x = None
+        self.previous_pos_y = None
+
         self.ival = -1
         if hasattr(self, 'ipos'):
             print self.ipos
@@ -33,7 +37,9 @@ class AbstractMaze(gym.Env):
 
         #Minecraft paper stops an episode after 50 steps
         self.steps_taken = 0 
-        self.action_space = spaces.Discrete(8)
+
+        nb_actions = 4
+        self.action_space = spaces.Discrete(nb_actions)
         #self.observation_space = spaces.Discrete(8)
         observation_size = self.maze.max_x*self.maze.max_y
         self.observation_space = spaces.Discrete(observation_size)
@@ -74,12 +80,13 @@ class AbstractMaze(gym.Env):
             outfile.write("\n")
 
             situation = np.copy(self.maze.perception(self.pos_x, self.pos_y))
+            '''
             situation = np.array([
                 [situation[7], situation[0], situation[1]],
                 [situation[6], ANIMAT_MARKER, situation[2]],
                 [situation[5], situation[4], situation[3]]], dtype=np.int8)
-
-            #situation[self.pos_y, self.pos_x] = ANIMAT_MARKER
+            '''
+            situation[self.pos_y, self.pos_x] = ANIMAT_MARKER
 
             for row in situation:
                 outfile.write("".join(self._render_element(el) for el in row))
@@ -103,27 +110,35 @@ class AbstractMaze(gym.Env):
         return i_idx == r_idx
 
     def _get_reward(self):
+        #Agent is on a goal point
         if self.maze.is_reward(self.pos_x, self.pos_y):
             rval = self.maze.matrix[self.pos_y,self.pos_x]
             if(hasattr(self, 'ipos') and not self.rewardCorrect(self.ival,rval)):
-                return -1.
+                return -0.4
             else:
                 return 1.   
 
-        #Modification as per Minecraft paper:
-        return -0.04
+        #Agent is not at a goal point.
+        step_reward = -0.02
+        collision_multiplier = 1
+
+        #More negative reinforcement for crashing into walls
+        if self.previous_pos_x == self.pos_x and self.previous_pos_y == self.pos_y:
+            step_reward *= collision_multiplier
+
+        return step_reward
         #return 0
 
     def _is_over(self):
         #return self.maze.is_reward(self.pos_x, self.pos_y)
         if(self.maze.is_reward(self.pos_x, self.pos_y) or self.steps_taken >= 50):
             self.steps_taken = 0
-
+            ''' TODO: Verify this
             if hasattr(self, 'ipos'):
                 choice = random.choice(INDICATOR_MAPPING)
                 self.maze.matrix[self.ipos[1],self.ipos[0]] = choice
                 self.ival = choice
-
+            '''
             return True
         else:
             return False
@@ -142,51 +157,53 @@ class AbstractMaze(gym.Env):
         action_type = ACTION_LOOKUP[action]
 
         n = (self.pos_x, self.pos_y - 1)
-        ne = (self.pos_x+1, self.pos_y-1)
+        #ne = (self.pos_x+1, self.pos_y-1)
         e = (self.pos_x+1, self.pos_y)
-        se = (self.pos_x+1, self.pos_y+1)
+        #se = (self.pos_x+1, self.pos_y+1)
         s = (self.pos_x, self.pos_y+1)
-        sw = (self.pos_x-1, self.pos_y+1)
+        #sw = (self.pos_x-1, self.pos_y+1)
         w = (self.pos_x-1, self.pos_y)
-        nw = (self.pos_x-1, self.pos_y-1)
+        #nw = (self.pos_x-1, self.pos_y-1)
 
+        #Save current position before moving
+        self.previous_pos_x, self.previous_pos_y = (self.pos_x, self.pos_y)
 
         if action_type == "N" and not self.maze.is_wall(n[0],n[1]):
             self.pos_y -= 1
             animat_moved = True
-
+        '''
         if action_type == 'NE' and not self.maze.is_wall(ne[0],ne[1]):
             self.pos_x += 1
             self.pos_y -= 1
             animat_moved = True
-
+        '''
         if action_type == "E" and not self.maze.is_wall(e[0],e[1]):
             self.pos_x += 1
             animat_moved = True
-
+        '''
         if action_type == 'SE' and not self.maze.is_wall(se[0],se[1]):
             self.pos_x += 1
             self.pos_y += 1
             animat_moved = True
-
+        '''
         if action_type == "S" and not self.maze.is_wall(s[0],s[1]):
             self.pos_y += 1
             animat_moved = True
-
+        '''
         if action_type == 'SW' and not self.maze.is_wall(sw[0],sw[1]):
             self.pos_x -= 1
             self.pos_y += 1
             animat_moved = True
-
+        '''
         if action_type == "W" and not self.maze.is_wall(w[0],w[1]):
             self.pos_x -= 1
             animat_moved = True
-
+        '''
         if action_type == 'NW' and not self.maze.is_wall(nw[0],nw[1]):
             self.pos_x -= 1
             self.pos_y -= 1
             animat_moved = True
-
+        '''
         return animat_moved
 
     def _insert_animat(self):
