@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 sns.set()
 
+import tensorflow as tf
+
 from keras.optimizers import RMSprop, Adam
 from keras.callbacks import TensorBoard
 
@@ -148,7 +150,7 @@ def main(model_name, options):
     '''
 
     # Compile the agent to check for validity, build tensorflow graph, etc.
-    dqn.compile(RMSprop(lr=learning_rate, clipnorm=clipnorm), metrics=["mae"])
+    dqn.compile(Adam(lr=learning_rate, clipnorm=clipnorm), metrics=["mae"])
 
     # Weights will be loaded if weight file exists.
     if os.path.exists("data/{}/{}".format(model_name, model_name + ".h5")):
@@ -211,4 +213,5 @@ if __name__ == "__main__":
         print "Usage: python MQN.py [model_name].h5 [train | test]"
         sys.exit()
 
-    main(model_name, options)
+    with tf.device("/gpu:0"):
+        main(model_name, options)
