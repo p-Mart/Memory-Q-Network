@@ -108,6 +108,9 @@ class Agent(object):
             callbacks.set_params(params)
         else:
             callbacks._set_params(params)
+
+        self.callbacks = callbacks
+
         self._on_train_begin()
         callbacks.on_train_begin()
 
@@ -228,13 +231,14 @@ class Agent(object):
                     # the *next* state, that is the state of the newly reset environment, is
                     # always non-terminal by convention.
                     self.forward(observation, env_number)
-                    self.backward(0., terminal=False, env_number=env_number)
+                    metrics = self.backward(0., terminal=False, env_number=env_number)
 
                     # This episode is finished, report and reset.
                     episode_logs = {
-                        'episode_reward': episode_reward,
-                        'nb_episode_steps': episode_step,
-                        'nb_steps': self.step,
+                        'episode_reward': np.array([episode_reward]),
+                        'nb_episode_steps': np.array([episode_step]),
+                        'nb_steps': np.array([self.step]),
+                        'metrics' : metrics
                     }
                     callbacks.on_episode_end(episode, episode_logs)
 

@@ -67,7 +67,7 @@ class Maze:
         perception = np.expand_dims(perception, axis=2)
 
         return perception
-    
+
     '''
     def perception(self, pos_x, pos_y):
         if not self._within_x_range(pos_x):

@@ -3,11 +3,13 @@ import warnings
 
 import keras.backend as K
 from keras.layers import Lambda, Input, Layer, Dense
+from keras.callbacks import  TensorBoard
 
 from rl.core import Agent
 from rl.policy import EpsGreedyQPolicy, GreedyQPolicy
 from rl.util import *
 from rl.keras_future import Model
+
 import math
 
 
@@ -224,6 +226,15 @@ class DQNAgent(AbstractDQNAgent):
         
         # Select an action.
         state = self.memory.get_recent_state(observation)
+
+        # Forward observation to Tensorboard Callback
+        # Set validation data in Tensorboard callback if it exists.
+        '''
+        for callback in self.callbacks:
+            if isinstance(callback, TensorBoard):
+                callback.model = self.model
+                callback.validation_data = (np.expand_dims(np.array(state), 0), ) * 4
+        '''
         #state = [observation]
         q_values = self.compute_q_values(state)
         if self.training:
@@ -325,6 +336,7 @@ class DQNAgent(AbstractDQNAgent):
             # the actual loss is computed in a Lambda layer that needs more complex input. However,
             # it is still useful to know the actual target to compute metrics properly.
             ins = [state0_batch] if type(self.model.input) is not list else state0_batch
+
             metrics = self.trainable_model.train_on_batch(ins + [targets, masks], [dummy_targets, targets])
             metrics = [metric for idx, metric in enumerate(metrics) if idx not in (1, 2)]  # throw away individual losses
             metrics += self.policy.metrics
@@ -335,6 +347,10 @@ class DQNAgent(AbstractDQNAgent):
             self.update_target_model_hard()
 
         return metrics
+
+    def get_sample(self):
+
+        return self.memories[0].sample(1)
 
     @property
     def layers(self):
