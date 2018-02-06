@@ -17,6 +17,7 @@ from keras.legacy import interfaces
 
 import tensorflow as tf
 
+
 class SimpleMemoryCell(Layer):
     """Cell class for the LSTM layer.
     # Arguments
@@ -66,8 +67,8 @@ class SimpleMemoryCell(Layer):
         self.recurrent_constraint = constraints.get(recurrent_constraint)
 
         self.memory_size = memory_size
-        self.state_size = (self.units, ) * (self.memory_size * 2) # M_key, M_value
-
+        self.state_size = (self.units, ) * \
+            (self.memory_size * 2)  # M_key, M_value
 
     def build(self, input_shape):
         input_dim = input_shape[-1]
@@ -85,7 +86,7 @@ class SimpleMemoryCell(Layer):
             regularizer=self.recurrent_regularizer,
             constraint=self.recurrent_constraint)
 
-        #super(SimpleMemoryCell, self).build(input_shape)
+        # super(SimpleMemoryCell, self).build(input_shape)
         self.built = True
 
     def call(self, inputs, states, training=None):
@@ -93,30 +94,31 @@ class SimpleMemoryCell(Layer):
 
         e_t = inputs[:, :-self.units]
         h_t = inputs[:, -self.units:]
-        
-        # states is M_key, M_value
-        M_key = list(states[:self.memory_size]) # shape=[Mxm]
-        M_value = list(states[self.memory_size:]) # shape=[Mxm]
 
-        #Conversion to tensors
+        # states is M_key, M_value
+        M_key = list(states[:self.memory_size])  # shape=[Mxm]
+        M_value = list(states[self.memory_size:])  # shape=[Mxm]
+
+        # Conversion to tensors
         M_key_tens = K.stack(M_key, axis=1)
         M_value_tens = K.stack(M_value, axis=1)
 
         # Calculate attention for memory
-        at = K.softmax(K.batch_dot(M_key_tens, h_t, axes=[2,1]))
+        at = K.softmax(K.batch_dot(M_key_tens, h_t, axes=[2, 1]))
 
         # Read from memory using attention, give as output
-        output = K.batch_dot(M_value_tens, at, axes=[1,1])
+        output = K.batch_dot(M_value_tens, at, axes=[1, 1])
 
         # Update states
-        M_key.pop(0) # shape = [M-1xm]
-        M_value.pop(0) # shape = [M-1xm]
-        m_key = K.dot(e_t, self.W_key) # shape = [1xm]
-        m_value = K.dot(e_t, self.W_value) # shape = [1xm]
-        M_key.append(m_key) # shape = [Mxm]
-        M_value.append(m_value) # shape = [Mxm]
+        M_key.pop(0)  # shape = [M-1xm]
+        M_value.pop(0)  # shape = [M-1xm]
+        m_key = K.dot(e_t, self.W_key)  # shape = [1xm]
+        m_value = K.dot(e_t, self.W_value)  # shape = [1xm]
+        M_key.append(m_key)  # shape = [Mxm]
+        M_value.append(m_value)  # shape = [Mxm]
 
         return output, M_key + M_value
+
 
 '''
     def get_config(self):
@@ -125,6 +127,8 @@ class SimpleMemoryCell(Layer):
 
         return dict(list(base_config.items()) + list(config.items()))
 '''
+
+
 class SimpleMemory(RNN):
     """Long-Short Term Memory layer - Hochreiter 1997.
     # Arguments
@@ -153,7 +157,7 @@ class SimpleMemory(RNN):
     """
 
     @interfaces.legacy_recurrent_support
-    def __init__(self, units, 
+    def __init__(self, units,
                  kernel_initializer='glorot_uniform',
                  recurrent_initializer='orthogonal',
                  kernel_regularizer=None,
@@ -164,20 +168,20 @@ class SimpleMemory(RNN):
                  **kwargs):
 
         cell = SimpleMemoryCell(units,
-                        kernel_initializer=kernel_initializer,
-                        recurrent_initializer=recurrent_initializer,
-                        kernel_regularizer=kernel_regularizer,
-                        recurrent_regularizer=recurrent_regularizer,
-                        kernel_constraint=kernel_constraint,
-                        recurrent_constraint=recurrent_constraint,
-                        memory_size=memory_size)
+                                kernel_initializer=kernel_initializer,
+                                recurrent_initializer=recurrent_initializer,
+                                kernel_regularizer=kernel_regularizer,
+                                recurrent_regularizer=recurrent_regularizer,
+                                kernel_constraint=kernel_constraint,
+                                recurrent_constraint=recurrent_constraint,
+                                memory_size=memory_size)
         super(SimpleMemory, self).__init__(cell=cell, **kwargs)
 
     def call(self, inputs, mask=None, training=None, initial_state=None):
         return super(SimpleMemory, self).call(inputs,
-                                      mask=mask,
-                                      training=training,
-                                      initial_state=initial_state)
+                                              mask=mask,
+                                              training=training,
+                                              initial_state=initial_state)
 
     @property
     def units(self):
@@ -211,24 +215,24 @@ class SimpleMemory(RNN):
     def memory_size(self):
         return self.cell.memory_size
 
-
     def get_config(self):
-        
+
         config = {'units': self.units,
-                  'kernel_initializer': initializers.serialize(self.kernel_initializer),
-                  'recurrent_initializer': initializers.serialize(self.recurrent_initializer),
-                  'kernel_regularizer': regularizers.serialize(self.kernel_regularizer),
-                  'recurrent_regularizer': regularizers.serialize(self.recurrent_regularizer),
-                  'kernel_constraint': constraints.serialize(self.kernel_constraint),
-                  'recurrent_constraint': constraints.serialize(self.recurrent_constraint),
+                  'kernel_initializer': initializers.serialize(
+                      self.kernel_initializer),
+                  'recurrent_initializer': initializers.serialize(
+                      self.recurrent_initializer),
+                  'kernel_regularizer': regularizers.serialize(
+                      self.kernel_regularizer),
+                  'recurrent_regularizer': regularizers.serialize(
+                      self.recurrent_regularizer),
+                  'kernel_constraint': constraints.serialize(
+                      self.kernel_constraint),
+                  'recurrent_constraint': constraints.serialize(
+                      self.recurrent_constraint),
                   'memory_size': self.memory_size}
-        
-        
+
         base_config = super(SimpleMemory, self).get_config()
 
         del base_config['cell']
         return dict(list(base_config.items()) + list(config.items()))
-
-
-
-    

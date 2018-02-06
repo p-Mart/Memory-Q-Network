@@ -9,17 +9,14 @@ from TemporalMemory import SimpleMemory, SimpleMemoryCell
 
 def MQNmodel(e_t_size, context_size, memory_size, window_length, nb_actions,
              maze_dim):
-    '''
+    """
     Architecture of the MQN.
     Initialize by calling:
     model = MQNmodel(e_t_size, context_size)
-    where e_t_size is the dimension of the
-    encoding of the convolutional layer, and
-    context_size is the dimension of the
-    context layer output.
-    nb_actions is the number of actions
-    in the environment.
-    '''
+    where e_t_size is the dimension of the encoding of the convolutional layer,
+    and context_size is the dimension of the context layer output. nb_actions
+    is the number of actions in the environment.
+    """
 
     # This is for the maze environment with partial observability
     input_layer = Input((window_length, maze_dim[0], maze_dim[1], 1))
@@ -161,6 +158,6 @@ def RMQNmodel(e_t_size, context_size, memory_size, window_length, nb_actions,
     output_layer = Dense(nb_actions, activation="linear")(output_layer)
 
     model = Model(inputs=input_layer, outputs=output_layer)
-    print model.summary()
+    print(model.summary())
     # plot_model(model, to_file='mqn_model.png')
     return model

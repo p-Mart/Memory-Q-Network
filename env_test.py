@@ -13,7 +13,7 @@ logger.setLevel(logging.DEBUG)
 maze = gym.make('IMaze6-v0')
 
 possible_actions = list(range(8))
-#transitions = maze.env.get_all_possible_transitions()
+# transitions = maze.env.get_all_possible_transitions()
 
 pygame.init()
 screen = pygame.display.set_mode((640, 480))
@@ -27,7 +27,7 @@ for i_episode in range(20):
 
     while True:
         maze.render()
-        #Block until key input
+        # Block until key input
         while(action == -1):
             for event in pygame.event.get():
                 if event.type == pygame.KEYDOWN:
@@ -40,7 +40,7 @@ for i_episode in range(20):
                     elif(event.key == K_LEFT):
                         action = 3
 
-        #action = choice(possible_actions)
+        # action = choice(possible_actions)
         logger.info("\t\tExecuted action: [{}]".format(action))
         observation, reward, done, info = maze.step(action)
         t += 1
