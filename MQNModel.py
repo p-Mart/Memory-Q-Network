@@ -6,25 +6,29 @@ import keras.backend as K
 
 from TemporalMemory import SimpleMemory, SimpleMemoryCell
 
-def MQNmodel(e_t_size, context_size, memory_size, window_length, nb_actions, maze_dim):
+
+def MQNmodel(e_t_size, context_size, memory_size, window_length, nb_actions,
+             maze_dim):
     '''
     Architecture of the MQN.
     Initialize by calling:
     model = MQNmodel(e_t_size, context_size)
     where e_t_size is the dimension of the
     encoding of the convolutional layer, and
-    context_size is the dimension of the 
+    context_size is the dimension of the
     context layer output.
     nb_actions is the number of actions
     in the environment.
     '''
 
-    #This is for the maze environment with partial observability
-    input_layer = Input((window_length, maze_dim[0], maze_dim[1],1))
-    provider = Conv3D(filters=12, kernel_size=(1,2,2), strides=(1,2,2), padding="valid")(input_layer)
-    provider = Conv3D(filters=24, kernel_size=(1,2,2), strides=(1,1,1), padding="valid")(provider)
+    # This is for the maze environment with partial observability
+    input_layer = Input((window_length, maze_dim[0], maze_dim[1], 1))
+    provider = Conv3D(filters=12, kernel_size=(1, 2, 2),
+                      strides=(1, 2, 2), padding="valid")(input_layer)
+    provider = Conv3D(filters=24, kernel_size=(1, 2, 2),
+                      strides=(1, 1, 1), padding="valid")(provider)
 
-    provider = Reshape((window_length,-1))(provider)
+    provider = Reshape((window_length, -1))(provider)
 
     e = Dense(e_t_size)(provider)
     e = Dropout(rate=0.5)(e)
@@ -46,7 +50,8 @@ def MQNmodel(e_t_size, context_size, memory_size, window_length, nb_actions, maz
 
     conc = Concatenate()([e, context])
 
-    memory = SimpleMemory(context_size, memory_size=memory_size, return_sequences=True)(conc)
+    memory = SimpleMemory(
+        context_size, memory_size=memory_size, return_sequences=True)(conc)
     output_layer = Dense(context_size, activation=PReLU())(context)
     output_layer = Dropout(0.5)(output_layer)
     output_layer = Add()([output_layer, memory])
@@ -56,19 +61,23 @@ def MQNmodel(e_t_size, context_size, memory_size, window_length, nb_actions, maz
     output_layer = Dense(nb_actions, activation="linear")(output_layer)
 
     model = Model(inputs=input_layer, outputs=output_layer)
-    print model.summary()
-    #plot_model(model, to_file='mqn_model.png')
+    print(model.summary())
+    # plot_model(model, to_file='mqn_model.png')
     return model
 
-def DistributionalMQNModel(e_t_size, context_size, window_length, nb_actions, nb_atoms, obs_dimensions):
-    input_layer = Input((window_length,7, 12,1))
-    provider = Conv3D(filters=12, kernel_size=(1,2,2), strides=(1,2,2), padding="valid")(input_layer)
-    provider = Conv3D(filters=24, kernel_size=(1,2,2), strides=(1,1,1), padding="valid")(provider)
 
-    provider = Reshape((window_length,-1))(provider)
+def DistributionalMQNModel(e_t_size, context_size, window_length, nb_actions,
+                           nb_atoms, obs_dimensions):
+    input_layer = Input((window_length, 7, 12, 1))
+    provider = Conv3D(filters=12, kernel_size=(1, 2, 2),
+                      strides=(1, 2, 2), padding="valid")(input_layer)
+    provider = Conv3D(filters=24, kernel_size=(1, 2, 2),
+                      strides=(1, 1, 1), padding="valid")(provider)
 
-    #input_layer = Input((window_length,))
-    #provider = Reshape((window_length,-1))(input_layer)
+    provider = Reshape((window_length, -1))(provider)
+
+    # input_layer = Input((window_length,))
+    # provider = Reshape((window_length,-1))(input_layer)
 
     e = Dense(e_t_size)(provider)
     e = Dropout(rate=0.5)(e)
@@ -78,14 +87,15 @@ def DistributionalMQNModel(e_t_size, context_size, window_length, nb_actions, nb
     conc = Concatenate()([e, context])
 
     memory = SimpleMemory(
-        context_size, 
-        memory_size=12, 
+        context_size,
+        memory_size=12,
         return_sequences=True
     )(conc)
 
     output_layer = Dense(context_size, activation="linear")(context)
-    #output_layer = Reshape((context_size,))(output_layer)
-    output_layer = Lambda(lambda x: K.relu(x[0] + x[1]))([output_layer, memory])
+    # output_layer = Reshape((context_size,))(output_layer)
+    output_layer = Lambda(lambda x: K.relu(
+        x[0] + x[1]))([output_layer, memory])
     output_layer = Dropout(rate=0.5)(output_layer)
     output_layer = Flatten()(output_layer)
 
@@ -95,11 +105,13 @@ def DistributionalMQNModel(e_t_size, context_size, window_length, nb_actions, nb
         outputs.append(Dense(nb_atoms, activation="softmax")(output_layer))
 
     model = Model(inputs=input_layer, outputs=outputs)
-    print model.summary()
-    #plot_model(model, to_file='distmodel.png')
+    print(model.summary())
+    # plot_model(model, to_file='distmodel.png')
     return model
 
-def RMQNmodel(e_t_size, context_size, memory_size, window_length, nb_actions, maze_dim):
+
+def RMQNmodel(e_t_size, context_size, memory_size, window_length, nb_actions,
+              maze_dim):
     '''
     Architecture of the MQN.
     Initialize by calling:
@@ -112,12 +124,14 @@ def RMQNmodel(e_t_size, context_size, memory_size, window_length, nb_actions, ma
     in the environment.
     '''
 
-    #This is for the maze environment.
-    input_layer = Input((window_length, maze_dim[0], maze_dim[1],1))
-    provider = Conv3D(filters=12, kernel_size=(1,2,2), strides=(1,2,2), padding="valid")(input_layer)
-    provider = Conv3D(filters=24, kernel_size=(1,2,2), strides=(1,1,1), padding="valid")(provider)
+    # This is for the maze environment.
+    input_layer = Input((window_length, maze_dim[0], maze_dim[1], 1))
+    provider = Conv3D(filters=12, kernel_size=(1, 2, 2),
+                      strides=(1, 2, 2), padding="valid")(input_layer)
+    provider = Conv3D(filters=24, kernel_size=(1, 2, 2),
+                      strides=(1, 1, 1), padding="valid")(provider)
 
-    provider = Reshape((window_length,-1))(provider)
+    provider = Reshape((window_length, -1))(provider)
 
     e = Dense(e_t_size)(provider)
     e = Dropout(rate=0.5)(e)
@@ -134,9 +148,9 @@ def RMQNmodel(e_t_size, context_size, memory_size, window_length, nb_actions, ma
 
     conc = Concatenate()([e, context])
 
-    memory = SimpleMemory(context_size, memory_size=memory_size, return_sequences=True)(conc)
+    memory = SimpleMemory(
+        context_size, memory_size=memory_size, return_sequences=True)(conc)
     output_layer = Dense(context_size, activation=PReLU())(context)
-
 
     output_layer = Add()([output_layer, memory])
     output_layer = Dense(context_size, activation=PReLU())(output_layer)
@@ -148,5 +162,5 @@ def RMQNmodel(e_t_size, context_size, memory_size, window_length, nb_actions, ma
 
     model = Model(inputs=input_layer, outputs=output_layer)
     print model.summary()
-    #plot_model(model, to_file='mqn_model.png')
+    # plot_model(model, to_file='mqn_model.png')
     return model
