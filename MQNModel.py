@@ -20,7 +20,7 @@ def MQNmodel(e_t_size, context_size, memory_size, window_length, nb_actions, maz
     '''
 
     #This is for the maze environment with partial observability
-    input_layer = Input((window_length, 6400))
+    input_layer = Input((window_length, 4))
     provider = Conv1D(filters=12, kernel_size=1, strides=1, padding="valid")(input_layer)
     provider = Conv1D(filters=24, kernel_size=1, strides=1, padding="valid")(provider)
 
