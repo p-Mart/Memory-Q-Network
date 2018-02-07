@@ -122,6 +122,36 @@ class RLTensorBoard(Callback):
         self.writer.close()
 
 
+class PongProcessor(Processor):
+    def process_observation(self, observation):
+        #reduce game frame to just paddle and ball
+        observation = observation[35:195] # cropping
+        observation = observation[::2, ::2, 0]
+        observation[observation == 144] = 0 #erase background
+        observation[observation == 109] = 0
+        observation[observation != 0] = 1 #paddles and balls set to 1
+        observation = observation.astype(np.float).ravel()
+        # print(observation.shape)
+        # np.squeeze(x, axis=(2,)).shape
+        # return np.squeeze(observation, axis=(2,))
+        return observation#.reshape((1,6400)) #flatten to 1d array
+
+    def process_state_batch(self, batch):
+        # #reduce game frame to just paddle and ball
+        # batch = batch[35:195] # cropping
+        # batch = batch[::2, ::2, 0]
+        # batch[batch == 144] = 0 #erase background
+        # batch[batch == 109] = 0
+        # batch[batch != 0] = 1 #paddles and balls set to 1
+        # print(batch[2].shape)
+        # batch = batch.astype(np.float).ravel()
+        return batch
+        # return batch.reshape((6400,1))
+        # return np.squeeze(batch, axis=(2,))
+        # return np.reshape(batch,(1,6400)) #flatten to 1d array
+
+
+
 class TaxiProcessor(Processor):
     """Processor for the taxi environment.
     Normalizes the input values to be within
@@ -229,8 +259,8 @@ def logHyperparameters(model_name, **kwargs):
 def logmetrics(log, model_name, window_length=50):
     """Utility function to log performance of model.
     Takes a callback log, the name of your model,
-    and an optional number of episodes represented 
-    per tick on the plot of model performance 
+    and an optional number of episodes represented
+    per tick on the plot of model performance
     (window_length)."""
 
     episode_rewards = []

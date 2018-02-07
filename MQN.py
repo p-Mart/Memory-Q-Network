@@ -22,11 +22,11 @@ from utilities import *
     Todo : *Add environment as an input option?
                *Automatic model loading / initialization
                    from hyperparams.txt, model_name.h5.
-    
+
                *As part of the above, possibly need to contain
                    hyperparameters as part of a dictionary that
                    can be used to automate the initialization process;
-                   this might even include the class name 
+                   this might even include the class name
                    (MQNModel, etc.). Would be a useful tool when
                    running large amounts of automated tests later.
 """
@@ -35,14 +35,14 @@ from utilities import *
 def main(model_name, options):
 
     # Initialize maze environments.
-    env = gym.make('IMaze3-v0')
+    env = gym.make('Pong-v0')
     #env = gym.make('Taxi-v2')
 
     envs = [env]
 
     # Setting hyperparameters.
     nb_actions = env.action_space.n
-    maze_dim = env.maze_dim
+    maze_dim =  (6400,1)
     h_size = 64 # For DQN
     e_t_size = 64 #For MQN / RMQN
     context_size = 64
@@ -85,7 +85,7 @@ def main(model_name, options):
     v_max = 2.
     #model = DistributionalMQNModel(e_t_size, context_size, window_length, nb_actions, nb_atoms, obs_dimensions)
     #target_model = DistributionalMQNModel(e_t_size, context_size, window_length, nb_actions, nb_atoms, obs_dimensions)
-    
+
     # DQN model
     if "DQN" in options:
         model = DQNmodel(nb_actions, window_length, h_size, maze_dim)
@@ -111,36 +111,36 @@ def main(model_name, options):
     )
 
     # Optional processor.
-    # processor = TaxiProcessor()
+    processor = PongProcessor()
     # processor = MazeProcessor()
 
     # Initialize and compile the DQN agent.
-    
+
     dqn = DQNAgent(
-        model=model, 
-        target_model=target_model, 
-        nb_actions=nb_actions, 
+        model=model,
+        target_model=target_model,
+        nb_actions=nb_actions,
         memory=experience,
-        nb_steps_warmup=nb_steps_warmup, 
-        target_model_update=target_model_update, 
+        nb_steps_warmup=nb_steps_warmup,
+        target_model_update=target_model_update,
         policy=policy,
-        #processor=processor,
-        batch_size=32
+        processor=processor,
+        batch_size=8
     )
-    
+
 
     #Initialize experimental Distributional DQN Agent
     '''
     dqn = DistributionalDQNAgent(
-        model=model, 
+        model=model,
         target_model=target_model,
         num_atoms=nb_atoms,
         v_min=v_min,
         v_max=v_max,
-        nb_actions=nb_actions, 
+        nb_actions=nb_actions,
         memory=experience,
-        nb_steps_warmup=nb_steps_warmup, 
-        target_model_update=target_model_update, 
+        nb_steps_warmup=nb_steps_warmup,
+        target_model_update=target_model_update,
         policy=policy,
         #processor=processor,
         batch_size=32
@@ -176,7 +176,7 @@ def main(model_name, options):
         )
 
         # Save weights.
-        dqn.save_weights("data/{}/{}".format(model_name, model_name + ".h5")) 
+        dqn.save_weights("data/{}/{}".format(model_name, model_name + ".h5"))
 
     # Test DQN in environment.
     if "test" in options:
@@ -197,18 +197,18 @@ if __name__ == "__main__":
 
     if len(sys.argv) >= 3:
         model_name = sys.argv[1]
-        
+
         mode = sys.argv[2]
 
         if mode != "train" and mode != "test":
-            print "Usage: python MQN.py [model_name].h5 [train | test]"
+            print ("Usage: python MQN.py [model_name].h5 [train | test]")
             sys.exit()
 
         options = sys.argv[2:]
 
     else:
-        print "Incorrect number of arguments."
-        print "Usage: python MQN.py [model_name].h5 [train | test]"
+        print ("Incorrect number of arguments.")
+        print ("Usage: python MQN.py [model_name].h5 [train | test]")
         sys.exit()
 
     main(model_name, options)

@@ -8,13 +8,13 @@ def DQNmodel(nb_actions, window_length, h_size, maze_dim):
     model = MQNmodel(e_t_size, context_size)
     where e_t_size is the dimension of the
     encoding of the convolutional layer, and
-    context_size is the dimension of the 
+    context_size is the dimension of the
     context layer output.
     nb_actions is the number of actions
-    in the environment. 
+    in the environment.
     '''
 
-    input_layer = Input((window_length, maze_dim[0], maze_dim[1],1))
+    input_layer = Input(shape=(4,))
     provider = Conv3D(filters=12, kernel_size=(1,2,2), strides=(1,2,2), padding="valid")(input_layer)
     provider = Conv3D(filters=24, kernel_size=(1,2,2), strides=(1,1,1), padding="valid")(provider)
     #e = Flatten()(input_layer)
@@ -32,7 +32,7 @@ def DQNmodel(nb_actions, window_length, h_size, maze_dim):
     e = Dropout(0.5)(e)
 
     model = Model(inputs=input_layer, outputs=e)
-    print model.summary()
+    print (model.summary())
     return model
 
 
@@ -43,10 +43,10 @@ def DistributionalDQNmodel(nb_actions, window_length, nb_atoms):
     model = MQNmodel(e_t_size, context_size)
     where e_t_size is the dimension of the
     encoding of the convolutional layer, and
-    context_size is the dimension of the 
+    context_size is the dimension of the
     context layer output.
     nb_actions is the number of actions
-    in the environment. 
+    in the environment.
     '''
 
 
