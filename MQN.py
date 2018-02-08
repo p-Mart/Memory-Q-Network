@@ -35,8 +35,8 @@ from utilities import *
 def main(model_name, options):
 
     # Initialize maze environments.
-    # env = gym.make('Pong-v0')
-    env = gym.make('CartPole-v0')
+    env = gym.make('Pong-v0')
+    # env = gym.make('CartPole-v0')
     #env = gym.make('Taxi-v2')
 
     envs = [env]
@@ -112,7 +112,7 @@ def main(model_name, options):
     )
 
     # Optional processor.
-    # processor = PongProcessor()
+    processor = PongProcessor()
     # processor = MazeProcessor()
 
     # Initialize and compile the DQN agent.
@@ -125,7 +125,7 @@ def main(model_name, options):
         nb_steps_warmup=nb_steps_warmup,
         target_model_update=target_model_update,
         policy=policy,
-        #processor=processor,
+        processor=processor,
         batch_size=8
     )
 
