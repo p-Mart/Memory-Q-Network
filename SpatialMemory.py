@@ -13,7 +13,7 @@ from keras.layers.recurrent import RNN
 # Legacy support.
 from keras.legacy.layers import Recurrent
 from keras.legacy import interfaces
-
+import tensorflow as tf
 
 class NeuralMapCell(Layer):
     """Cell class for the Neural Map layer.
@@ -42,7 +42,7 @@ class NeuralMapCell(Layer):
             Set equal to the [h,w].
     """
 
-    def __init__(self, units,
+    def __init__(self, units, pos_input,
                  kernel_initializer='glorot_uniform',
                  recurrent_initializer='orthogonal',
                  kernel_regularizer=None,
@@ -53,7 +53,7 @@ class NeuralMapCell(Layer):
                  **kwargs):
         super(NeuralMapCell, self).__init__(**kwargs)
         self.units = units
-
+        self.pos_input = pos_input
         self.kernel_initializer = initializers.get(kernel_initializer)
         self.recurrent_initializer = initializers.get(recurrent_initializer)
 
@@ -133,50 +133,95 @@ class NeuralMapCell(Layer):
         # inputs are going to come in as a tuple of size 2
         # where inputs[0] is the context prior to the neural
         # map, and inputs[1] will be another tuple - (x, y)
-
-        # context = inputs[0]
-        # (x, y) = inputs[1]
-
+        context = inputs
+        x, y = (self.pos_input[:, 0], self.pos_input[:, 1])
+        # x, y = (K.expand_dims(x, -1), K.expand_dims(y, -1))
         # preprocessing states to get memory
         memory = states[1:((self.memory_size[0] * self.memory_size[1]) + 1)]
         memory = K.transpose(memory)
-        memory = K.reshape(memory, (self.units, self.memory_size[0], self.memory_size[1]))
+        memory = K.reshape(memory, (-1, self.units, self.memory_size[0], self.memory_size[1]))
+
+        # Need this for later computations
+        batch_size = K.shape(memory)[0]
 
         # global read operation
         # r_t = read(M_t) ; output dimension of r_t = self.units
         first_conv = K.conv2d(memory, self.conv_kernel1, strides=(1,1), padding='same', data_format='channels_first')
         second_conv = K.conv2d(first_conv, self.conv_kernel2, strides=(1,1), padding='valid', data_format='channels_first')
         pool_conv = K.pool2d(second_conv, pool_size=(2,2), strides=(1,1), padding='valid', data_format='channels_first', pool_mode='avg')
-        flatten_conv = K.flatten(pool_conv)
+        flatten_conv = K.batch_flatten(pool_conv)
         dense1_conv = K.dot(flatten_conv, self.conv_dense1)
         dense2_conv = K.dot(dense1_conv, self.conv_dense2)
         r_t = dense2_conv
 
         # context read operation
         # c_t = context(M_t, s_t, r_t)
-        q_t = K.concatenate([inputs, r_t]) # [1x(s+c)]
+        q_t = K.concatenate([context, r_t]) # [1x(s+c)]
         q_t = K.dot(q_t, self.context_kernel) # [1xc]
-        at = K.exp(K.dot(q_t, memory)) # [1xhxw]
-        at_sum = K.sum(at)
+        # at = K.exp(K.dot(q_t, memory)) # [1xhxw]
+        # at_sum = K.sum(at)
         # at_sum_repeated = K.repeat (at_sum, (self.memory_size[0], self.memory_size[1]))
-        at /= at_sum # [1xhxw]
+        # at /= at_sum # [1xhxw]
 
         # Compute attention with softmax, use batch_dot function
+        # Keras is garbage, and so am I
+        q_t_repeated = K.expand_dims(q_t, axis=2)
+        q_t_repeated = K.expand_dims(q_t_repeated, axis=3)
+        q_t_repeated = K.repeat_elements(q_t_repeated, self.memory_size[0], 2)
+        q_t_repeated = K.repeat_elements(q_t_repeated, self.memory_size[1], 3)
 
-        #at = K.softmax(K.batch_dot(q_t, memory, axes=[??]))
+        at = K.sum(q_t_repeated * memory, axis=1)
+        at_sum = K.sum(at, axis=1, keepdims=True)
+        at_sum = K.sum(at_sum, axis=2, keepdims=True)
+        at_sum = K.repeat_elements(at_sum, self.memory_size[0], 1)
+        at_sum = K.repeat_elements(at_sum, self.memory_size[1], 2)
 
-        c_t = K.dot(at, memory) # [1xc]
+        at = at / at_sum
+        at = K.expand_dims(at, axis=1)
+        at = K.repeat_elements(at, self.units, 1)
+
+        c_t = K.sum(at * memory, axis=2)
+        c_t = K.sum(c_t, axis=2)
+
 
         # Computing write value
         # m_t+1_x,y = write(s_t, r_t, c_t, m_t_x,y)
-        s_t = K.dot(inputs, self.write_kernel) # [1xc]
-        global_imp = K.dot(s_t, K.transpose(r_t)) # [1x1]
-        local_imp = K.dot(s_t, K.transpose(c_t)) # [1x1]
-        mem_t = memory[:, x, y] # [cx1x1]
-        mem_t = K.reshape(mem_t, (1, self.units)) # [1xc]
+        s_t = K.dot(context, self.write_kernel) # [1xc]
+        global_imp = K.batch_dot(s_t, r_t, axes=1) # [1x1]
+        local_imp = K.batch_dot(s_t, c_t, axes=1) # [1x1]
+
+        # Convert batched x,y coordinates into indices for memory
+        # We want to index into memory by doing something like
+        # memory[sample_number, y, x] so that we get a {units} dimensional
+        # vector out. When we do this for every sample in the batch, we'll
+        # end up with a {number_batches, units} dimensional matrix.
+
+        # First we copy and reshape the memory into {batch_size x H x W x units}
+        mem_t = K.reshape(memory, (batch_size, self.memory_size[0], self.memory_size[1], self.units))
+
+        # Now we generate the indices
+        B = tf.range(0, batch_size) # {batch_size}
+        idx = tf.stack([B, y, x], axis=1) # {batch_size x 3}
+
+        # And index into the memory using tf.gather_nd
+        mem_t = tf.gather_nd(mem_t, idx) # {batch_size x units}
         mem_t += (local_imp / (local_imp + global_imp)) * K.dot((mem_t - s_t), self.write_update)
-        mem_t = K.reshape(mem_t, (self.units, 1, 1)) # [cx1x1]
-        memory[:, x, y] = mem_t
+
+        # We have to reshape the memory b/c of how we calculated indices:
+        memory = K.reshape(memory, (batch_size, self.memory_size[0], self.memory_size[1], self.units))
+
+        # While loop to update memory.
+        i = tf.constant(0)
+        c = lambda i : tf.less(i, batch_size)
+        def body(i):
+            memory[i, y[i], x[i]] = mem_t[i]
+            return tf.add(i, 1)
+
+        tf.while_loop(c, body, [i])
+        # Would love to just use this, but tf has a stick in its butt
+        # memory = tf.scatter_nd_update(memory, idx, mem_t)
+
+        # memory[:, :] = mem_t
 
         # update states
         mem_t = K.reshape(mem_t, (1, self.units))
@@ -213,7 +258,7 @@ class NeuralMap(RNN):
     """
 
     @interfaces.legacy_recurrent_support
-    def __init__(self, units,
+    def __init__(self, units, pos_input,
                  kernel_initializer='glorot_uniform',
                  recurrent_initializer='orthogonal',
                  kernel_regularizer=None,
@@ -222,7 +267,7 @@ class NeuralMap(RNN):
                  recurrent_constraint=None,
                  memory_size=[10,10],
                  **kwargs):
-        cell = NeuralMapCell(units,
+        cell = NeuralMapCell(units, pos_input=pos_input,
                         kernel_initializer=kernel_initializer,
                         recurrent_initializer=recurrent_initializer,
                         kernel_regularizer=kernel_regularizer,

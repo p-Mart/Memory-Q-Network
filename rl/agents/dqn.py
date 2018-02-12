@@ -227,14 +227,6 @@ class DQNAgent(AbstractDQNAgent):
         # Select an action.
         state = self.memory.get_recent_state(observation)
 
-        # Forward observation to Tensorboard Callback
-        # Set validation data in Tensorboard callback if it exists.
-        '''
-        for callback in self.callbacks:
-            if isinstance(callback, TensorBoard):
-                callback.model = self.model
-                callback.validation_data = (np.expand_dims(np.array(state), 0), ) * 4
-        '''
         #state = [observation]
         q_values = self.compute_q_values(state)
         if self.training:

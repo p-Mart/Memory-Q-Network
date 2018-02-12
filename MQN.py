@@ -18,6 +18,7 @@ from rl.callbacks import TrainEpisodeLogger
 
 import gym
 from MQNModel import *
+from NeuralMapModel import *
 from DQNModel import *
 from utilities import *
 
@@ -42,6 +43,7 @@ def main(model_name, options):
     # Initialize maze environments.
     env = gym.make('IMaze3-v0')
     # env = gym.make('Taxi-v2')
+
 
     envs = [env]
 
@@ -91,17 +93,12 @@ def main(model_name, options):
             e_t_size, context_size, memory_size, window_length, nb_actions,
             maze_dim)
 
-    # Distributional MQN model.
-    nb_atoms = 51
-    v_min = -2.
-    v_max = 2.
-    # model = DistributionalMQNModel(
-    #     e_t_size, context_size, window_length, nb_actions, nb_atoms,
-    #     obs_dimensions)
-    # target_model = DistributionalMQNModel(
-    #     e_t_size, context_size, window_length, nb_actions, nb_atoms,
-    #     obs_dimensions)
-
+    # Neural Map model
+    if "NMAP" in options:
+        env.give_position = True
+        model = NeuralMapModel(e_t_size, context_size, window_length, nb_actions, maze_dim)
+        target_model = NeuralMapModel(e_t_size, context_size, window_length, nb_actions, maze_dim)
+    
     # DQN model
     if "DQN" in options:
         model = DQNmodel(nb_actions, window_length, h_size, maze_dim)
@@ -193,10 +190,7 @@ def main(model_name, options):
             learning_rate=learning_rate,
             target_model_update=target_model_update,
             clipnorm=clipnorm,
-            window_length=window_length,
-            nb_atoms=nb_atoms,
-            v_min=v_min,
-            v_max=v_max
+            window_length=window_length
         )
 
         # Deprecated in favor of tensorboard
