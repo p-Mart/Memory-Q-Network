@@ -35,15 +35,15 @@ from utilities import *
 def main(model_name, options):
 
     # Initialize maze environments.
-    env = gym.make('Pong-v0')
-    # env = gym.make('CartPole-v0')
+    # env = gym.make('Pong-v0')
+    env = gym.make('CartPole-v0')
     #env = gym.make('Taxi-v2')
 
     envs = [env]
 
     # Setting hyperparameters.
     nb_actions = env.action_space.n
-    maze_dim =  (6400,1)
+    maze_dim =  (4,1)
     h_size = 64 # For DQN
     e_t_size = 64 #For MQN / RMQN
     context_size = 64
@@ -112,7 +112,7 @@ def main(model_name, options):
     )
 
     # Optional processor.
-    processor = PongProcessor()
+    # processor = PongProcessor()
     # processor = MazeProcessor()
 
     # Initialize and compile the DQN agent.
@@ -125,8 +125,8 @@ def main(model_name, options):
         nb_steps_warmup=nb_steps_warmup,
         target_model_update=target_model_update,
         policy=policy,
-        processor=processor,
-        batch_size=8
+        # processor=processor,
+        batch_size=32
     )
 
 
