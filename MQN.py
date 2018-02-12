@@ -1,6 +1,8 @@
 import sys, os, errno
 
 import numpy as np
+import matplotlib
+matplotlib.use('Agg') # Code will crash on headless server without this
 import matplotlib.pyplot as plt
 import seaborn as sns
 sns.set()
@@ -154,9 +156,17 @@ def main(model_name, options):
     if os.path.exists("data/{}/{}".format(model_name, model_name + ".h5")):
         dqn.load_weights("data/{}/{}".format(model_name, model_name + ".h5"))
 
+    # Attempt to create log directory for this model.
+    log_dir = "data/{}/"
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+
     # Train DQN in environment.
     if "train" in options:
         dqn.fit(env, nb_steps=nb_steps, verbose=0, callbacks=callbacks)
+
+        # Save weights.
+        dqn.save_weights("data/{}/{}".format(model_name, model_name + ".h5"))
 
         # Visualization / Logging Tools
         logmetrics(log, model_name)
@@ -175,8 +185,7 @@ def main(model_name, options):
             v_max=v_max
         )
 
-        # Save weights.
-        dqn.save_weights("data/{}/{}".format(model_name, model_name + ".h5")) 
+
 
     # Test DQN in environment.
     if "test" in options:
