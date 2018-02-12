@@ -30,9 +30,9 @@ class RLTensorBoard(Callback):
         self.sess = K.get_session()
 
         # Log all layer outputs for each layer
-        layer_names, layer_outputs = outputLayer(
-            self.model, self.model.get_sample())
-        tf.summary.histogram(layer_names, layer_outputs)
+        # layer_names, layer_outputs = outputLayer(
+        #     self.model, self.model.get_sample())
+        # tf.summary.histogram(layer_names, layer_outputs)
         self.writer = tf.summary.FileWriter(self.log_dir,
                                             self.sess.graph)
 
@@ -89,6 +89,7 @@ class RLTensorBoard(Callback):
                         session=self.sess), episode)
 
                 # TODO : Get gradients
+                '''
                 gradients = model.optimizer.get_gradients(model.total_loss,
                                                           weights)
                 input_tensors = [
@@ -106,6 +107,7 @@ class RLTensorBoard(Callback):
 
                 self.log_histogram(
                     gradients.name, get_gradients(inputs), episode)
+                '''
 
         # Log scalar values to TensorBoard contained in log variable
         # (reward, loss, etc.)

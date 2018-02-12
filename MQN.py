@@ -48,10 +48,10 @@ def main(model_name, options):
     # Setting hyperparameters.
     nb_actions = env.action_space.n
     maze_dim = env.maze_dim
-    h_size = 64  # For DQN
-    e_t_size = 64  # For MQN / RMQN
+    h_size = 8  # For DQN
+    e_t_size = 8  # For MQN / RMQN
     context_size = 64
-    nb_steps_warmup = int(1e5)
+    nb_steps_warmup = int(1e3)
     nb_steps = int(4e5)
     buffer_size = 8e4
     learning_rate = 0.003
@@ -84,7 +84,7 @@ def main(model_name, options):
 
     # RMQN model.
     if "RMQN" in options:
-        memory_size = 12
+        memory_size = 4
         model = RMQNmodel(e_t_size, context_size, memory_size,
                           window_length, nb_actions, maze_dim)
         target_model = RMQNmodel(
@@ -172,7 +172,7 @@ def main(model_name, options):
         dqn.load_weights("data/{}/{}".format(model_name, model_name + ".h5"))
 
     # Attempt to create log directory for this model.
-    log_dir = "data/{}/"
+    log_dir = "data/{}/".format(model_name)
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
 
@@ -184,7 +184,6 @@ def main(model_name, options):
         dqn.save_weights("data/{}/{}".format(model_name, model_name + ".h5"))
 
         # Visualization / Logging Tools
-        logmetrics(log, model_name)
         logHyperparameters(
             model_name,
             e_t_size=e_t_size,
@@ -199,6 +198,10 @@ def main(model_name, options):
             v_min=v_min,
             v_max=v_max
         )
+
+        # Deprecated in favor of tensorboard
+        # logmetrics(log, model_name)
+
 
     # Test DQN in environment.
     if "test" in options:
