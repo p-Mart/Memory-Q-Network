@@ -4,9 +4,9 @@ from keras.models import Model
 from keras.utils import plot_model
 import keras.backend as K
 
-from TemporalMemory import SimpleMemory, SimpleMemoryCell
+from SpatialMemory import *
 
-def NeuralMapModel(e_t_size, context_size, memory_size, window_length, nb_actions, maze_dim):
+def NeuralMapModel(e_t_size, context_size, window_length, nb_actions, maze_dim):
     '''
     Architecture of the MQN.
     Initialize by calling:
@@ -46,7 +46,10 @@ def NeuralMapModel(e_t_size, context_size, memory_size, window_length, nb_action
 
     conc = Concatenate()([e, context])
 
-    memory = SimpleMemory(context_size, memory_size=memory_size, return_sequences=True)(conc)
+    # memory = SimpleMemory(context_size, memory_size=memory_size, return_sequences=True)(conc)
+    xy_pos = Input((2,), dtype='int32')
+    memory = NeuralMap(context_size, pos_input=xy_pos)(conc)
+
     output_layer = Dense(context_size, activation=PReLU())(context)
     output_layer = Dropout(0.5)(output_layer)
     output_layer = Add()([output_layer, memory])
@@ -55,7 +58,7 @@ def NeuralMapModel(e_t_size, context_size, memory_size, window_length, nb_action
     output_layer = Flatten()(output_layer)
     output_layer = Dense(nb_actions, activation="linear")(output_layer)
 
-    model = Model(inputs=input_layer, outputs=output_layer)
+    model = Model(inputs=[input_layer, xy_pos], outputs=output_layer)
     print model.summary()
     #plot_model(model, to_file='mqn_model.png')
     return model

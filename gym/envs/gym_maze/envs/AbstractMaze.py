@@ -25,6 +25,8 @@ class AbstractMaze(gym.Env):
         self.maze = Maze(matrix)
         self.maze_dim = matrix.shape
 
+        self.give_position = False
+
         self.pos_x = None
         self.pos_y = None
         self.previous_pos_x = None
@@ -95,7 +97,10 @@ class AbstractMaze(gym.Env):
             super(AbstractMaze, self).render(mode=mode)
 
     def _observe(self):
-        return self.maze.perception(self.pos_x, self.pos_y)
+        if self.give_position:
+            return [self.maze.perception(self.pos_x, self.pos_y), (self.pos_x, self.pos_y)]
+        else:
+            return self.maze.perception(self.pos_x, self.pos_y)
 
     def rewardCorrect(self, ival, rval):
         '''Returns if the reward chosen is correct based on the

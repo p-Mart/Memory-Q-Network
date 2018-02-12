@@ -15,6 +15,7 @@ from rl.callbacks import TrainEpisodeLogger
 
 import gym
 from MQNModel import *
+from NeuralMapModel import *
 from DQNModel import *
 from utilities import *
 
@@ -35,7 +36,7 @@ from utilities import *
 def main(model_name, options):
 
     # Initialize maze environments.
-    env = gym.make('IMaze3-v0')
+    env = gym.make('IMaze6-v0')
     #env = gym.make('Taxi-v2')
 
     envs = [env]
@@ -79,12 +80,11 @@ def main(model_name, options):
         model = RMQNmodel(e_t_size, context_size, memory_size, window_length, nb_actions, maze_dim)
         target_model = RMQNmodel(e_t_size, context_size, memory_size, window_length, nb_actions, maze_dim)
 
-    # Distributional MQN model.
-    nb_atoms = 51
-    v_min = -2.
-    v_max = 2.
-    #model = DistributionalMQNModel(e_t_size, context_size, window_length, nb_actions, nb_atoms, obs_dimensions)
-    #target_model = DistributionalMQNModel(e_t_size, context_size, window_length, nb_actions, nb_atoms, obs_dimensions)
+    # Neural Map model
+    if "NMAP" in options:
+        env.give_position = True
+        model = NeuralMapModel(e_t_size, context_size, window_length, nb_actions, maze_dim)
+        target_model = NeuralMapModel(e_t_size, context_size, window_length, nb_actions, maze_dim)
     
     # DQN model
     if "DQN" in options:
