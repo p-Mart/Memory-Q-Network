@@ -1,15 +1,19 @@
-import sys, os, errno
+import sys
+import os
+import errno
 
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-sns.set()
 
 from rl.core import Processor
 from rl.callbacks import Callback
 
 import keras.backend as K
 import tensorflow as tf
+
+sns.set()
+
 
 class RLTensorBoard(Callback):
     def __init__(self, log_dir='./logs', histogram_freq=20):
@@ -26,8 +30,9 @@ class RLTensorBoard(Callback):
         self.sess = K.get_session()
 
         # Log all layer outputs for each layer
-        #layer_names, layer_outputs = outputLayer(self.model, self.model.get_sample())
-        #tf.summary.histogram(layer_names, layer_outputs)
+        layer_names, layer_outputs = outputLayer(
+            self.model, self.model.get_sample())
+        tf.summary.histogram(layer_names, layer_outputs)
         self.writer = tf.summary.FileWriter(self.log_dir,
                                             self.sess.graph)
 
@@ -50,8 +55,10 @@ class RLTensorBoard(Callback):
         hist.sum = float(np.sum(values))
         hist.sum_squares = float(np.sum(values ** 2))
 
-        # Requires equal number as bins, where the first goes from -DBL_MAX to bin_edges[1]
-        # See https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/framework/summary.proto#L30
+        # Requires equal number as bins, where the first goes from -DBL_MAX to
+        # bin_edges[1]
+        """(https://github.com/tensorflow/tensorflow/blob/master/tensorflow/core/framework/summary.proto#L30)'
+        """
         # Thus, we drop the start of the first bin
         bin_edges = bin_edges[1:]
 
@@ -69,19 +76,26 @@ class RLTensorBoard(Callback):
     def on_episode_end(self, episode, logs=None):
         logs = logs or {}
 
-        # Log the weights and gradients to Tensorboard every histogram_freq steps.
+        # Log the weights and gradients to Tensorboard every histogram_freq
+        # steps.
         # Getting the gradients takes a long time, so this should only be used
         # for debugging.
         if episode % self.histogram_freq == 0:
             for layer in self.model.model.layers:
-                weights = [weight for weight in layer.weights if layer.trainable]
+                weights = [
+                    weight for weight in layer.weights if layer.trainable]
                 for weight in weights:
-                    self.log_histogram(weight.name, weight.eval(session=self.sess), episode)
+                    self.log_histogram(weight.name, weight.eval(
+                        session=self.sess), episode)
 
-                '''TODO : Get gradients
-                gradients = model.optimizer.get_gradients(model.total_loss, weights)
-                input_tensors = [model.inputs[0], model.sample_weights[0], model.targets[0], K.learning_phase()]
-                get_gradients = K.function(inputs=input_tensors, outputs=gradients)
+                # TODO : Get gradients
+                gradients = model.optimizer.get_gradients(model.total_loss,
+                                                          weights)
+                input_tensors = [
+                    model.inputs[0], model.sample_weights[0], model.targets[0],
+                    K.learning_phase()]
+                get_gradients = K.function(
+                    inputs=input_tensors, outputs=gradients)
 
                 inputs = [
                     model.inputs[0].eval(session=self.sess),
@@ -90,15 +104,17 @@ class RLTensorBoard(Callback):
                     1
                 ]
 
-                self.log_histogram(gradients.name, get_gradients(inputs), episode)
-                '''
+                self.log_histogram(
+                    gradients.name, get_gradients(inputs), episode)
 
-        # Log scalar values to TensorBoard contained in log variable (reward, loss, etc.)
+        # Log scalar values to TensorBoard contained in log variable
+        # (reward, loss, etc.)
         for name, value in logs.items():
 
             summary = tf.Summary()
 
-            # Metrics is a list of misc. metrics returned from the backprop step.
+            # Metrics is a list of misc. metrics returned from the backprop
+            # step.
             if name == 'metrics':
                 for idx, metric in enumerate(value):
                     if metric != np.nan:
@@ -108,8 +124,6 @@ class RLTensorBoard(Callback):
                         self.writer.add_summary(summary, episode)
 
                 continue
-
-
 
             summary_value = summary.value.add()
             summary_value.simple_value = value.item()
@@ -126,6 +140,7 @@ class TaxiProcessor(Processor):
     """Processor for the taxi environment.
     Normalizes the input values to be within
     the range (0, 1)."""
+
     def process_observation(self, observation):
         processed_observation = observation / 500.
         return processed_observation
@@ -139,6 +154,7 @@ class MazeProcessor(Processor):
     """Processor for the maze environment.
     Normalizes the input values to be within
     the range (0, 1)."""
+
     def process_observation(self, observation):
         processed_observation = np.array(observation, dtype=np.int8) / 10.
         return processed_observation
@@ -158,7 +174,8 @@ def outputWeights(model):
 
     returns : map of each layer to their weights
     """
-    weights = [(layer.get_weights.name, layer.get_weights()) for layer in model.layers]
+    weights = [(layer.get_weights.name, layer.get_weights())
+               for layer in model.layers]
 
     return zip(model.layers, weights)
 
@@ -175,9 +192,11 @@ def outputLayer(model, sample):
 
     returns : map of each layer name to their output for a given sample
     """
-    inp = model.input                                           # input placeholder
-    activations = [layer.output for layer in model.layers]          # all layer outputs
-    activation_functor = K.function([inp]+ [K.learning_phase()], activations ) # evaluation function
+    inp = model.input  # input placeholder
+    # all layer outputs
+    activations = [layer.output for layer in model.layers]
+    activation_functor = K.function(
+        [inp] + [K.learning_phase()], activations)  # evaluation function
 
     # Testing
     layer_activations = activation_functor([sample, 1.])
@@ -196,6 +215,7 @@ def visualizeLayer(model, layer, sample):
     inputs = [K.learning_phase()] + model.inputs
 
     _output = K.function(inputs, [layer.output])
+
     def output(x):
         return _output([0] + [x])
 
@@ -203,13 +223,13 @@ def visualizeLayer(model, layer, sample):
     output = np.squeeze(output)
 
     n = int(np.ceil(np.sqrt(output.shape[0])))
-    fig = plt.figure(figsize=(12,8))
+    fig = plt.figure(figsize=(12, 8))
     for i in range(output.shape[0]):
-        ax = fig.add_subplot(n,n,i+1)
+        ax = fig.add_subplot(n, n, i + 1)
         im = ax.imshow(output[i], cmap='jet')
 
-    #plt.imshow(output[0], cmap='jet')
-    cbar_ax = fig.add_axes([0.15,0.05,0.7,0.02])
+    # plt.imshow(output[0], cmap='jet')
+    cbar_ax = fig.add_axes([0.15, 0.05, 0.7, 0.02])
     fig.colorbar(im, cax=cbar_ax, orientation='horizontal')
     plt.show()
 
@@ -229,8 +249,8 @@ def logHyperparameters(model_name, **kwargs):
 def logmetrics(log, model_name, window_length=50):
     """Utility function to log performance of model.
     Takes a callback log, the name of your model,
-    and an optional number of episodes represented 
-    per tick on the plot of model performance 
+    and an optional number of episodes represented
+    per tick on the plot of model performance
     (window_length)."""
 
     episode_rewards = []
@@ -245,7 +265,7 @@ def logmetrics(log, model_name, window_length=50):
     for key, value in log.episodic_metrics_variables.items():
         for i in range(0, len(log.episodic_metrics_variables[key]), 2):
             name = log.episodic_metrics_variables[key][i]
-            val = log.episodic_metrics_variables[key][i+1]
+            val = log.episodic_metrics_variables[key][i + 1]
             if(name == "loss" and val != '--'):
                 episode_losses.append(val)
             if(name == "mean_q" and val != '--'):
@@ -261,12 +281,14 @@ def logmetrics(log, model_name, window_length=50):
 
     nb_losses = len(episode_losses)
     nb_partitions = nb_losses // window_length
-    episode_losses  = np.array(episode_losses[:nb_partitions* window_length])
+    episode_losses = np.array(episode_losses[:nb_partitions * window_length])
     episode_losses = episode_losses.reshape((window_length, nb_partitions))
 
     # Save metrics for future use.
-    rewards_filename = "data/{}/{}_episodes-rewards.npy".format(model_name, nb_episodes)
-    losses_filename = "data/{}/{}_episodes-losses.npy".format(model_name, nb_episodes)
+    rewards_filename = "data/{}/{}_episodes-rewards.npy".format(
+        model_name, nb_episodes)
+    losses_filename = "data/{}/{}_episodes-losses.npy".format(
+        model_name, nb_episodes)
 
     if not os.path.exists(os.path.dirname(rewards_filename)):
         try:
@@ -284,11 +306,13 @@ def logmetrics(log, model_name, window_length=50):
     plt.title("Avg. Reward for {} episode intervals".format(window_length))
     plt.ylabel("Reward")
     plt.xlabel("1 tick per {} episodes".format(window_length))
-    plt.savefig("data/{}/{}_episodes-rewards.png".format(model_name, nb_episodes))
+    plt.savefig(
+        "data/{}/{}_episodes-rewards.png".format(model_name, nb_episodes))
 
     plt.figure(2)
     sns.tsplot(data=episode_losses)
     plt.title("Avg. Loss for {} episode intervals".format(window_length))
     plt.ylabel("Loss")
     plt.xlabel("1 tick per {} episodes".format(window_length))
-    plt.savefig("data/{}/{}_episodes-losses.png".format(model_name, nb_episodes))
+    plt.savefig("data/{}/{}_episodes-losses.png".format(
+        model_name, nb_episodes))
