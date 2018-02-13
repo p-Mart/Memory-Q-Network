@@ -4,29 +4,30 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 from torch import optim
 
-from vizdoom import *
+import vizdoom
 import random
 from collections import namedtuple
 import math
 import matplotlib.pyplot as plt
+import time
 
 plt.ion()
-
 
 '''
 ================================================================================
 '''
 
-game = DoomGame()
+game = vizdoom.DoomGame()
 
 path = 'C:/Users/georg/Documents/GitHub/Vizdoom-MemQN/scenarios/' + \
        'my_way_home.wad'
 game.set_doom_scenario_path(path)
-game.set_screen_resolution(ScreenResolution.RES_320X240)
-game.set_screen_format(ScreenFormat.RBG24)  # [0, 255]^3 for each pixel
+game.set_screen_resolution(vizdoom.ScreenResolution.RES_320X240)
+game.set_screen_format(vizdoom.ScreenFormat.RGB24)  # [0, 255]^3 for each pixel
 
-game.add_available_game_variable(GameVariable.POSITION_X)
-game.add_available_game_variable(GameVariable.POSITION_Y)
+# Get position data
+game.add_available_game_variable(vizdoom.GameVariable.POSITION_X)
+game.add_available_game_variable(vizdoom.GameVariable.POSITION_Y)
 
 # Don't render what's not nessecary
 game.set_render_hud(False)
@@ -40,11 +41,11 @@ game.set_render_messages(False)
 game.set_render_corpses(False)
 
 # Add buttons
-game.add_available_button(Button.MOVE_LEFT)
-game.add_available_button(Button.MOVE_RIGHT)
-game.add_available_button(Button.MOVE_FORWARD)
-game.add_available_button(Button.TURN_LEFT)
-game.add_available_button(Button.TURN_RIGHT)
+game.add_available_button(vizdoom.Button.MOVE_LEFT)
+game.add_available_button(vizdoom.Button.MOVE_RIGHT)
+game.add_available_button(vizdoom.Button.MOVE_FORWARD)
+game.add_available_button(vizdoom.Button.TURN_LEFT)
+game.add_available_button(vizdoom.Button.TURN_RIGHT)
 
 # Only one action at a time
 actions = [[1, 0, 0, 0, 0],
@@ -54,10 +55,10 @@ actions = [[1, 0, 0, 0, 0],
            [0, 0, 0, 0, 1]]
 
 # Episode and display settings
-game.set_episode_timeout(2000)
+game.set_episode_timeout(2100)
 game.set_episode_start_time(0)
 game.set_living_reward(-0.0001)
-game.set_mode(Mode.PLAYER)
+game.set_mode(vizdoom.Mode.PLAYER)
 game.set_window_visible(True)
 
 game.init()
@@ -123,10 +124,12 @@ class DQN(nn.Module):
 
 
 # 4000 max for GTX 1060
-replay_mem = ReplayMemory(4000)
+replay_mem = ReplayMemory(10000)
 model = DQN(240, 320, hidden_size=256, num_actions=len(actions))
+target_model = DQN(240, 320, hidden_size=256, num_actions=len(actions))
 if use_cuda:
     model.cuda()
+    target_model.cuda()
 optimizer = optim.Adam(model.parameters())
 
 steps_done = 0
@@ -153,6 +156,7 @@ def takeAction(actions, state):
 
 
 last_sync = 0
+sync_every = 1000
 
 
 # Calculates cost and then optimizes
@@ -179,10 +183,14 @@ def train(batch_size, gamma):
     # Compute Q(s, a)
     # https://discuss.pytorch.org/t/select-specific-columns-of-each-row-in-a-torch-tensor/497
     Q = model(state_batch).gather(1, action_batch.view(-1, 1))
-    # Compute max_a Q(s', a)
-    max_Q = model(next_state_batch).max(1)[0]
+    # Occasionally sync target_model and model
+    if last_sync >= sync_every:
+        target_model.load_state_dict(model.state_dict())
+    last_sync += 1
+    # Compute max_a Q(s', a) using target network
+    max_Q = target_model(next_state_batch).max(1)[0]
 
-    # Calculate loss using Q*(s, a) = E(r + y max_a Q*(s', a))
+    # Calculate loss using Q*(s, a) = E(r + y max_a' Q*(s', a'))
     target_Q = reward_batch + gamma * max_Q
     # Huber loss
     loss = F.smooth_l1_loss(Q, target_Q)
@@ -195,7 +203,7 @@ def train(batch_size, gamma):
     optimizer.step()
 
 
-def plot(eps_losses):
+def plot(eps_losses, delay):
     plt.figure(1)
     plt.clf()
     losses_torch = torch.FloatTensor(eps_losses)
@@ -211,7 +219,7 @@ def plot(eps_losses):
     # Flashes plot for 2 seconds (I couldn't get it to work with interactive
     # mode)
     plt.show()
-    plt.pause(2)
+    plt.pause(delay)
     plt.close(1)
 
 
@@ -219,25 +227,41 @@ def plot(eps_losses):
 ===============================================================================
 '''
 
-# Otherwise everything would be too fast
-# sleep_time = 1.0 / DEFAULT_TICRATE
 
-# Load state_dict
-if True:
-    save_path = 'C:/Users/georg/Documents/GitHub/Vizdoom-MemQN/dqn.json'
+def timeSince(since):
+    return time.time() - since
+
+
+# Load/save control
+load_model = False
+save_model = True
+save_path = 'C:/Users/georg/Documents/GitHub/Vizdoom-MemQN/dqn.json'
+
+# Train control
+while_train = True
+
+# Load model if desired
+if load_model:
     model.load_state_dict(torch.load(save_path))
+    target_model.load_state_dict(torch.load(save_path))
 
-# init last screen to zeros
+# Init last screen to zeros
 last_screen = torch.zeros(1, 3, 640, 480)
 
 batch_size = 128
-N_eps = 1000
 eps_losses = []
+chkpt = 500  # save every chkpt episodes
+N_eps = 10
+n_eps = 0  # number of epsiodes so far
+train_time = 60 * 60 * 24 * 2  # 2 days
+show_step_stats = False  # prob not needed for a 2 day train
 
-plot(eps_losses)
+start = time.time()
 
-for i in range(N_eps):
-    print("Episode #%d" % (i + 1))
+
+def step():  # so there is less boiler plate code
+    global last_screen
+    print("Episode %d" % (n_eps + 1))
 
     game.new_episode()
     eps_loss = 0
@@ -246,19 +270,19 @@ for i in range(N_eps):
         state = game.get_state()
         vars = state.game_variables
         screen = state.screen_buffer
-        screen = screen.transpose((2, 0, 1))  # convert to C x H x W np array
+        # Convert to C x H x W np array
+        screen = screen.transpose((2, 0, 1))
         screen = torch.from_numpy(screen).type(FloatTensor)
         screen = screen.unsqueeze(0)  # batch_dim = 1
 
         a = takeAction(actions, screen)
         r = game.make_action(a)
-        # r = game.make_action(actions[3])  # Pans in larger action set
 
         if state.number != 1:  # skip
             # Turn a and r into tensors before pushing
-            a = LongTensor(a).unsqueeze(0)  # unsqueeze needed for cat in train
+            # Unsqueeze needed for cat in train
+            a = LongTensor(a).unsqueeze(0)
             replay_mem.push(last_screen, a, screen, Tensor([r]))
-            print(len(replay_mem))
 
         last_screen = screen
 
@@ -266,22 +290,33 @@ for i in range(N_eps):
 
         eps_loss += r
 
-        print("State:", state.number)
-        print("Variables:", vars)
-        print("Reward:", r)  # easier to print r than Tensor([r])
-        print("=====================")
-
-        # if sleep_time > 0:
-        #     time.sleep(sleep_time)
+        if show_step_stats:  # prob not nessecary for a 2 day train
+            print("State:", state.number)
+            print("Variables:", vars)
+            print("Reward:", r)  # easier to print r than Tensor([r])
+            print("=====================")
 
     eps_losses.append(eps_loss)
-    plot(eps_losses)
+    plot(eps_losses, 2)  # I couldn't get the graph to dynamically update
 
-# save model
-if True:
+    # Save at checkpoint
+    if save_model and n_eps % chkpt == 0:
+        torch.save(model.state_dict(), save_path)
+
+
+if while_train:
+    while timeSince(start) <= train_time:
+        step()
+else:
+    for n_eps in range(N_eps):
+        step()
+
+# Save model at end if desired
+if save_model:
     torch.save(model.state_dict(), save_path)
+
+plot(eps_losses, 60 * 60 * 24)  # plot stays up for a day
 
 # For the sake of completeness
 game.close()
 plt.ioff()
-plt.show()
