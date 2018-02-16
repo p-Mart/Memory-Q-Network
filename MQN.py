@@ -60,7 +60,7 @@ def main(model_name, options):
     target_model_update = 0.999
     clipnorm = 10.
     switch_rate = 50
-    window_length = 12
+    window_length = 1
     memory_size = None
 
     # Callbacks
@@ -133,8 +133,9 @@ def main(model_name, options):
 
     dqn = DQNAgent(
         model=model,
-        target_model=target_model,
-        nb_actions=nb_actions,
+        has_pos=True,
+        target_model=target_model, 
+        nb_actions=nb_actions, 
         memory=experience,
         nb_steps_warmup=nb_steps_warmup,
         target_model_update=target_model_update,
@@ -177,10 +178,11 @@ def main(model_name, options):
     if "train" in options:
         dqn.fit(env, nb_steps=nb_steps, verbose=0, callbacks=callbacks)
 
-        # Save weights.
+
         dqn.save_weights("data/{}/{}".format(model_name, model_name + ".h5"))
 
         # Visualization / Logging Tools
+        # logmetrics(log, model_name)
         logHyperparameters(
             model_name,
             e_t_size=e_t_size,

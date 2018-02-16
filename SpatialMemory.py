@@ -69,6 +69,12 @@ class NeuralMapCell(Layer):
     def build(self, input_shape):
         input_dim = input_shape[-1]
 
+        self.neural_map = tf.Variable(
+            initial_value=np.random.uniform(size=(self.units, self.memory_size[0], self.memory_size[1])),
+            trainable=False,
+            name="Neural_Map"
+        )
+
         # kernels for Deep CNN for global read (r_t)
         kernel1_shape = (3,3,self.units,32)
         self.conv_kernel1 = self.add_weight(shape=kernel1_shape,

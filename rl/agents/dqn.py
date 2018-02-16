@@ -20,7 +20,7 @@ def mean_q(y_true, y_pred):
 class AbstractDQNAgent(Agent):
     """Write me
     """
-    def __init__(self, nb_actions, memory, gamma=.99, batch_size=32, nb_steps_warmup=1000,
+    def __init__(self, nb_actions, memory, has_pos=False, gamma=.99, batch_size=32, nb_steps_warmup=1000,
                  train_interval=1, memory_interval=1, target_model_update=10000,
                  delta_range=None, delta_clip=np.inf, custom_model_objects={}, **kwargs):
         super(AbstractDQNAgent, self).__init__(**kwargs)
@@ -50,6 +50,7 @@ class AbstractDQNAgent(Agent):
         self.delta_clip = delta_clip
         self.custom_model_objects = custom_model_objects
 
+        self.has_pos = has_pos
         self.memories = memory
         # Related objects.
         if(len(memory) > 1):
@@ -61,7 +62,15 @@ class AbstractDQNAgent(Agent):
         self.compiled = False
 
     def process_state_batch(self, batch):
-        batch = np.array(batch)
+        # So realistically, we could just for loop over this if there's a
+        # __len__ attribute in batch
+        # Someday
+        if self.has_pos and hasattr(batch[0], "shape"):
+            batch[0] = np.array([batch[0]])
+            batch[1] = np.array([batch[1]])
+        #else:
+        #    batch = np.array(batch)
+
         if self.processor is None:
             return batch
         return self.processor.process_state_batch(batch)
@@ -69,11 +78,20 @@ class AbstractDQNAgent(Agent):
     def compute_batch_q_values(self, state_batch):
         batch = self.process_state_batch(state_batch)
         q_values = self.model.predict_on_batch(batch)
-        assert q_values.shape == (len(state_batch), self.nb_actions)
+
+        if self.has_pos:
+            assert q_values.shape == (len(state_batch[0]), self.nb_actions)
+        else:
+            assert q_values.shape == (len(state_batch), self.nb_actions)
+
         return q_values
 
     def compute_q_values(self, state):
-        q_values = self.compute_batch_q_values([state]).flatten()
+
+        if not self.has_pos:
+            state = [state]
+
+        q_values = self.compute_batch_q_values(state).flatten()
         assert q_values.shape == (self.nb_actions,)
         return q_values
 
@@ -261,21 +279,38 @@ class DQNAgent(AbstractDQNAgent):
             assert len(experiences) == self.batch_size
 
             # Start by extracting the necessary parameters (we use a vectorized implementation).
-            state0_batch = []
+            state0_batch = [] if not self.has_pos else [[],[]]
             reward_batch = []
             action_batch = []
             terminal1_batch = []
-            state1_batch = []
+            state1_batch = [] if not self.has_pos else [[],[]]
             for e in experiences:
-                state0_batch.append(e.state0)
-                state1_batch.append(e.state1)
+                if not self.has_pos:
+                    state0_batch.append(e.state0)
+                    state1_batch.append(e.state1)
+                else:
+                    state0_batch[0].append(e.state0[0][0])
+                    state0_batch[1].append(e.state0[0][1])
+
+                    state1_batch[0].append(e.state1[0][0])
+                    state1_batch[1].append(e.state1[0][1])
+
                 reward_batch.append(e.reward)
                 action_batch.append(e.action)
                 terminal1_batch.append(0. if e.terminal1 else 1.)
 
+            if self.has_pos:
+                state0_batch[0] = np.array(state0_batch[0]).squeeze(axis=1)
+                state0_batch[1] = np.array(state0_batch[1]).squeeze(axis=1)
+
+                state1_batch[0] = np.array(state1_batch[0]).squeeze(axis=1)
+                state1_batch[1] = np.array(state1_batch[1]).squeeze(axis=1)
+
             # Prepare and validate parameters.
-            state0_batch = self.process_state_batch(state0_batch)
-            state1_batch = self.process_state_batch(state1_batch)
+            if not self.has_pos:
+                state0_batch = self.process_state_batch(state0_batch)
+                state1_batch = self.process_state_batch(state1_batch)
+
             terminal1_batch = np.array(terminal1_batch)
             reward_batch = np.array(reward_batch)
             assert reward_batch.shape == (self.batch_size,)
@@ -329,6 +364,7 @@ class DQNAgent(AbstractDQNAgent):
             # it is still useful to know the actual target to compute metrics properly.
             ins = [state0_batch] if type(self.model.input) is not list else state0_batch
 
+            # Create different inputs for multi-input agent
             metrics = self.trainable_model.train_on_batch(ins + [targets, masks], [dummy_targets, targets])
             metrics = [metric for idx, metric in enumerate(metrics) if idx not in (1, 2)]  # throw away individual losses
             metrics += self.policy.metrics
