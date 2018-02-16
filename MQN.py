@@ -47,14 +47,14 @@ def main(model_name, options):
     h_size = 64 # For DQN
     e_t_size = 64 #For MQN / RMQN
     context_size = 64
-    nb_steps_warmup = int(1e5)
+    nb_steps_warmup = int(1e3)
     nb_steps = int(4e5)
     buffer_size = 8e4
     learning_rate = 0.003
     target_model_update = 0.999
     clipnorm = 10.
     switch_rate = 50
-    window_length = 12
+    window_length = 1
     memory_size = None
 
     # Callbacks
@@ -117,7 +117,8 @@ def main(model_name, options):
     # Initialize and compile the DQN agent.
     
     dqn = DQNAgent(
-        model=model, 
+        model=model,
+        has_pos=True,
         target_model=target_model, 
         nb_actions=nb_actions, 
         memory=experience,
@@ -158,8 +159,10 @@ def main(model_name, options):
     if "train" in options:
         dqn.fit(env, nb_steps=nb_steps, verbose=0, callbacks=callbacks)
 
+        dqn.save_weights("data/{}/{}".format(model_name, model_name + ".h5"))
+
         # Visualization / Logging Tools
-        logmetrics(log, model_name)
+        # logmetrics(log, model_name)
         logHyperparameters(
             model_name,
             e_t_size=e_t_size,
@@ -170,13 +173,9 @@ def main(model_name, options):
             target_model_update=target_model_update,
             clipnorm=clipnorm,
             window_length=window_length,
-            nb_atoms=nb_atoms,
-            v_min=v_min,
-            v_max=v_max
         )
 
         # Save weights.
-        dqn.save_weights("data/{}/{}".format(model_name, model_name + ".h5")) 
 
     # Test DQN in environment.
     if "test" in options:

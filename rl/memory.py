@@ -91,7 +91,7 @@ class Memory(object):
         # This code is slightly complicated by the fact that subsequent observations might be
         # from different episodes. We ensure that an experience never spans multiple episodes.
         # This is probably not that important in practice but it seems cleaner.
-        state = [current_observation]
+        state = current_observation
         idx = len(self.recent_observations) - 1
         for offset in range(0, self.window_length - 1):
             current_idx = idx - offset
