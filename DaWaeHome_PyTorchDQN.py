@@ -179,7 +179,6 @@ def train(batch_size, gamma):
     reward_batch = Variable(torch.cat(batch.reward),
                             volatile=True, requires_grad=False)
 
-    # TODO: Implement target-Q network
     # Compute Q(s, a)
     # https://discuss.pytorch.org/t/select-specific-columns-of-each-row-in-a-torch-tensor/497
     Q = model(state_batch).gather(1, action_batch.view(-1, 1))
