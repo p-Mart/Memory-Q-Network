@@ -1,6 +1,7 @@
 import sys
 import os
 import errno
+import copy
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -14,6 +15,16 @@ import tensorflow as tf
 
 sns.set()
 
+class LayerDebug(Callback):
+    def __init__(self):
+        meme = None
+
+    def set_model(self, model):
+        self.model = model.model
+
+    def on_step_end(self, step, logs=None):
+        outputs = outputLayer(self.model, logs["observation"])
+        meme = outputs
 
 class RLTensorBoard(Callback):
     def __init__(self, log_dir='./logs', histogram_freq=20):
@@ -157,12 +168,22 @@ class MazeProcessor(Processor):
     Normalizes the input values to be within
     the range (0, 1)."""
 
+    def __init__(self, gives_pos=None):
+        super(MazeProcessor, self).__init__()
+        if gives_pos:
+            self.gives_pos = gives_pos
+
     def process_observation(self, observation):
-        processed_observation = np.array(observation, dtype=np.int8) / 10.
+        if hasattr(self, "gives_pos"):
+            observation[0] = observation[0].astype(dtype=np.float16) / 10.
+            processed_observation = observation
+        else:
+            processed_observation = np.array(observation, dtype=np.float16) / 10.
+
         return processed_observation
 
     def process_state_batch(self, batch):
-        processed_batch = np.array(batch, dtype=np.int8) / 10.
+        processed_batch = batch
         return processed_batch
 
 
@@ -197,14 +218,18 @@ def outputLayer(model, sample):
     inp = model.input  # input placeholder
     # all layer outputs
     activations = [layer.output for layer in model.layers]
-    activation_functor = K.function(
-        [inp] + [K.learning_phase()], activations)  # evaluation function
+    functor = K.function(inp + [K.learning_phase()], activations)  # evaluation function
 
     # Testing
-    layer_activations = activation_functor([sample, 1.])
+    sample_copy = copy.deepcopy(sample)
+    if hasattr(sample, '__len__'):
+        for i in range(len(sample_copy)):
+            sample_copy[i] = np.expand_dims(sample_copy[i], axis=0)
+
+    layer_activations = functor([sample_copy[0], sample_copy[1], 1.])
 
     # Map layer outputs to corresponding layer names.
-    return zip([layer.name for layer in model.layers], layer_outs)
+    return zip([layer.name for layer in model.layers], layer_activations)
 
 
 def visualizeLayer(model, layer, sample):

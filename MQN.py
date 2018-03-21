@@ -8,7 +8,7 @@ matplotlib.use('Agg') # Code will crash on headless server without this
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from keras.optimizers import RMSprop, Adam
+from keras.optimizers import *
 from keras.callbacks import TensorBoard
 
 from rl.agents.dqn import DQNAgent, DistributionalDQNAgent
@@ -18,6 +18,7 @@ from rl.callbacks import TrainEpisodeLogger
 
 import gym
 from MQNModel import *
+from NeuralMapModel import *
 from DQNModel import *
 from utilities import *
 
@@ -27,11 +28,11 @@ sns.set()
     Todo : *Add environment as an input option?
                *Automatic model loading / initialization
                    from hyperparams.txt, model_name.h5.
-
+    
                *As part of the above, possibly need to contain
                    hyperparameters as part of a dictionary that
                    can be used to automate the initialization process;
-                   this might even include the class name
+                   this might even include the class name 
                    (MQNModel, etc.). Would be a useful tool when
                    running large amounts of automated tests later.
 """
@@ -50,24 +51,26 @@ def main(model_name, options):
     maze_dim = env.maze_dim
     h_size = 8  # For DQN
     e_t_size = 8  # For MQN / RMQN
-    context_size = 64
-    nb_steps_warmup = int(1e3)
+    context_size = 32
+    nb_steps_warmup = int(1e4)
     nb_steps = int(4e5)
     buffer_size = 8e4
-    learning_rate = 0.003
+    learning_rate = 0.03
     target_model_update = 0.999
     clipnorm = 10.
     switch_rate = 50
-    window_length = 12
+    window_length = 1
     memory_size = None
 
     # Callbacks
     log = TrainEpisodeLogger()
     # tensorboard = TensorBoard(log_dir="./logs/{}".format(model_name))
     rl_tensorboard = RLTensorBoard(
-        log_dir="./logs/{}".format(model_name), histogram_freq=100)
+        log_dir="./logs/{}".format(model_name), histogram_freq=10)
 
     callbacks = [log, rl_tensorboard]
+    if "debug" in options:
+        callbacks.append(LayerDebug())
 
     # Models
     model = None
@@ -91,17 +94,24 @@ def main(model_name, options):
             e_t_size, context_size, memory_size, window_length, nb_actions,
             maze_dim)
 
-    # Distributional MQN model.
-    nb_atoms = 51
-    v_min = -2.
-    v_max = 2.
-    # model = DistributionalMQNModel(
-    #     e_t_size, context_size, window_length, nb_actions, nb_atoms,
-    #     obs_dimensions)
-    # target_model = DistributionalMQNModel(
-    #     e_t_size, context_size, window_length, nb_actions, nb_atoms,
-    #     obs_dimensions)
-
+    # Neural Map model
+    if "NMAP" in options:
+        env.give_position = True
+        model = NeuralMapModel(e_t_size,
+                               context_size,
+                               window_length,
+                               nb_actions,
+                               maze_dim,
+                               memory_size=maze_dim
+                               )
+        target_model = NeuralMapModel(e_t_size,
+                               context_size,
+                               window_length,
+                               nb_actions,
+                               maze_dim,
+                               memory_size=maze_dim
+                               )
+    
     # DQN model
     if "DQN" in options:
         model = DQNmodel(nb_actions, window_length, h_size, maze_dim)
@@ -125,26 +135,28 @@ def main(model_name, options):
         value_max=1.0,
         value_min=0.1,
         value_test=0.,
-        nb_steps=1e5
+        nb_steps=4e4
     )
 
     # Optional processor.
     # processor = TaxiProcessor()
-    # processor = MazeProcessor()
+    processor = MazeProcessor(gives_pos=True)
 
     # Initialize and compile the DQN agent.
 
     dqn = DQNAgent(
         model=model,
-        target_model=target_model,
-        nb_actions=nb_actions,
+        has_pos=True,
+        target_model=target_model, 
+        nb_actions=nb_actions, 
         memory=experience,
         nb_steps_warmup=nb_steps_warmup,
         target_model_update=target_model_update,
         policy=policy,
-        # processor=processor,
+        processor=processor,
         batch_size=32
     )
+    
 
     # Initialize experimental Distributional DQN Agent
     '''
@@ -180,7 +192,7 @@ def main(model_name, options):
     if "train" in options:
         dqn.fit(env, nb_steps=nb_steps, verbose=0, callbacks=callbacks)
 
-        # Save weights.
+
         dqn.save_weights("data/{}/{}".format(model_name, model_name + ".h5"))
 
         # Visualization / Logging Tools
@@ -193,10 +205,7 @@ def main(model_name, options):
             learning_rate=learning_rate,
             target_model_update=target_model_update,
             clipnorm=clipnorm,
-            window_length=window_length,
-            nb_atoms=nb_atoms,
-            v_min=v_min,
-            v_max=v_max
+            window_length=window_length
         )
 
         # Deprecated in favor of tensorboard
@@ -210,11 +219,10 @@ def main(model_name, options):
     # Debugging
     if "debug" in options:
         observation = env.reset()
-        outputLayer(dqn.model, np.array(experience[0].sample(32)[0].state0))
+        #outputLayer(dqn.model, np.array(experience[0].sample(32)[0].state0))
         # visualizeLayer(dqn.model, dqn.layers[1], observation)
 
     return
-
 
 if __name__ == "__main__":
 

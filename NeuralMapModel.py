@@ -4,9 +4,9 @@ from keras.models import Model
 from keras.utils import plot_model
 import keras.backend as K
 
-from TemporalMemory import SimpleMemory, SimpleMemoryCell
+from SpatialMemory2 import *
 
-def NeuralMapModel(e_t_size, context_size, memory_size, window_length, nb_actions, maze_dim):
+def NeuralMapModel(e_t_size, context_size, window_length, nb_actions, maze_dim, memory_size):
     '''
     Architecture of the MQN.
     Initialize by calling:
@@ -20,42 +20,24 @@ def NeuralMapModel(e_t_size, context_size, memory_size, window_length, nb_action
     '''
 
     #This is for the maze environment with partial observability
-    input_layer = Input((window_length, maze_dim[0], maze_dim[1],1))
-    provider = Conv3D(filters=12, kernel_size=(1,2,2), strides=(1,2,2), padding="valid")(input_layer)
-    provider = Conv3D(filters=24, kernel_size=(1,2,2), strides=(1,1,1), padding="valid")(provider)
+    input_layer = Input((maze_dim[0], maze_dim[1],1))
 
-    provider = Reshape((window_length,-1))(provider)
+    provider = Flatten()(input_layer)
+    e = Dense(e_t_size, activation="relu")(provider)
 
-    e = Dense(e_t_size)(provider)
-    e = Dropout(rate=0.5)(e)
+    context = Dense(context_size, activation="relu")(e)
 
-    '''
-    # For 8 - square partial observability
-    input_layer = Input((window_length,8,))
+    xy_pos = Input((2,), dtype='int32')
+    memory = NeuralMap(context_size, memory_size=memory_size)([context, xy_pos])
 
-    provider = Dense(e_t_size, activation=PReLU())(input_layer)
-    provider = Dropout(0.5)(provider)
-    provider = Dense(e_t_size, activation=PReLU())(provider)
-    provider = Dropout(0.5)(provider)
-
-    e = Dense(e_t_size, activation=PReLU())(provider)
-    e = Dropout(0.5)(e)
-    '''
-    context = Dense(context_size, activation="linear")(e)
-    context = Dropout(0.5)(context)
-
-    conc = Concatenate()([e, context])
-
-    memory = SimpleMemory(context_size, memory_size=memory_size, return_sequences=True)(conc)
-    output_layer = Dense(context_size, activation=PReLU())(context)
-    output_layer = Dropout(0.5)(output_layer)
+    output_layer = Dense(context_size, activation='relu')(context)
     output_layer = Add()([output_layer, memory])
-    output_layer = Dense(context_size, activation=PReLU())(output_layer)
-    output_layer = Dropout(0.5)(output_layer)
-    output_layer = Flatten()(output_layer)
+    output_layer = Dropout(0.7)(output_layer)
+    output_layer = Dense(context_size, activation='relu')(output_layer)
+    output_layer = Dropout(0.7)(output_layer)
+
     output_layer = Dense(nb_actions, activation="linear")(output_layer)
 
-    model = Model(inputs=input_layer, outputs=output_layer)
+    model = Model(inputs=[input_layer, xy_pos], outputs=output_layer)
     print model.summary()
-    #plot_model(model, to_file='mqn_model.png')
     return model
