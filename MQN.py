@@ -28,11 +28,11 @@ sns.set()
     Todo : *Add environment as an input option?
                *Automatic model loading / initialization
                    from hyperparams.txt, model_name.h5.
-
+    
                *As part of the above, possibly need to contain
                    hyperparameters as part of a dictionary that
                    can be used to automate the initialization process;
-                   this might even include the class name
+                   this might even include the class name 
                    (MQNModel, etc.). Would be a useful tool when
                    running large amounts of automated tests later.
 """
@@ -43,7 +43,6 @@ def main(model_name, options):
     # Initialize maze environments.
     env = gym.make('IMaze3-v0')
     # env = gym.make('Taxi-v2')
-
 
     envs = [env]
 
@@ -157,6 +156,7 @@ def main(model_name, options):
         processor=processor,
         batch_size=32
     )
+    
 
     # Initialize experimental Distributional DQN Agent
     '''
@@ -177,7 +177,7 @@ def main(model_name, options):
     '''
 
     # Compile the agent to check for validity, build tensorflow graph, etc.
-    dqn.compile(Nadam(lr=learning_rate))
+    dqn.compile(RMSprop(lr=learning_rate, clipnorm=clipnorm), metrics=["mae"])
 
     # Weights will be loaded if weight file exists.
     if os.path.exists("data/{}/{}".format(model_name, model_name + ".h5")):
@@ -196,7 +196,6 @@ def main(model_name, options):
         dqn.save_weights("data/{}/{}".format(model_name, model_name + ".h5"))
 
         # Visualization / Logging Tools
-        # logmetrics(log, model_name)
         logHyperparameters(
             model_name,
             e_t_size=e_t_size,
@@ -224,7 +223,6 @@ def main(model_name, options):
         # visualizeLayer(dqn.model, dqn.layers[1], observation)
 
     return
-
 
 if __name__ == "__main__":
 
