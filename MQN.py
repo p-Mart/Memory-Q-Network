@@ -8,7 +8,7 @@ matplotlib.use('Agg') # Code will crash on headless server without this
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from keras.optimizers import RMSprop, Adam
+from keras.optimizers import *
 from keras.callbacks import TensorBoard
 
 from rl.agents.dqn import DQNAgent, DistributionalDQNAgent
@@ -52,11 +52,11 @@ def main(model_name, options):
     maze_dim = env.maze_dim
     h_size = 8  # For DQN
     e_t_size = 8  # For MQN / RMQN
-    context_size = 64
-    nb_steps_warmup = int(1e3)
+    context_size = 32
+    nb_steps_warmup = int(1e4)
     nb_steps = int(4e5)
     buffer_size = 8e4
-    learning_rate = 0.003
+    learning_rate = 0.03
     target_model_update = 0.999
     clipnorm = 10.
     switch_rate = 50
@@ -67,9 +67,11 @@ def main(model_name, options):
     log = TrainEpisodeLogger()
     # tensorboard = TensorBoard(log_dir="./logs/{}".format(model_name))
     rl_tensorboard = RLTensorBoard(
-        log_dir="./logs/{}".format(model_name), histogram_freq=100)
+        log_dir="./logs/{}".format(model_name), histogram_freq=10)
 
     callbacks = [log, rl_tensorboard]
+    if "debug" in options:
+        callbacks.append(LayerDebug())
 
     # Models
     model = None
@@ -96,8 +98,20 @@ def main(model_name, options):
     # Neural Map model
     if "NMAP" in options:
         env.give_position = True
-        model = NeuralMapModel(e_t_size, context_size, window_length, nb_actions, maze_dim)
-        target_model = NeuralMapModel(e_t_size, context_size, window_length, nb_actions, maze_dim)
+        model = NeuralMapModel(e_t_size,
+                               context_size,
+                               window_length,
+                               nb_actions,
+                               maze_dim,
+                               memory_size=maze_dim
+                               )
+        target_model = NeuralMapModel(e_t_size,
+                               context_size,
+                               window_length,
+                               nb_actions,
+                               maze_dim,
+                               memory_size=maze_dim
+                               )
     
     # DQN model
     if "DQN" in options:
@@ -122,12 +136,12 @@ def main(model_name, options):
         value_max=1.0,
         value_min=0.1,
         value_test=0.,
-        nb_steps=1e5
+        nb_steps=4e4
     )
 
     # Optional processor.
     # processor = TaxiProcessor()
-    # processor = MazeProcessor()
+    processor = MazeProcessor(gives_pos=True)
 
     # Initialize and compile the DQN agent.
 
@@ -140,7 +154,7 @@ def main(model_name, options):
         nb_steps_warmup=nb_steps_warmup,
         target_model_update=target_model_update,
         policy=policy,
-        # processor=processor,
+        processor=processor,
         batch_size=32
     )
 
@@ -163,7 +177,7 @@ def main(model_name, options):
     '''
 
     # Compile the agent to check for validity, build tensorflow graph, etc.
-    dqn.compile(RMSprop(lr=learning_rate, clipnorm=clipnorm), metrics=["mae"])
+    dqn.compile(Nadam(lr=learning_rate))
 
     # Weights will be loaded if weight file exists.
     if os.path.exists("data/{}/{}".format(model_name, model_name + ".h5")):
@@ -206,7 +220,7 @@ def main(model_name, options):
     # Debugging
     if "debug" in options:
         observation = env.reset()
-        outputLayer(dqn.model, np.array(experience[0].sample(32)[0].state0))
+        #outputLayer(dqn.model, np.array(experience[0].sample(32)[0].state0))
         # visualizeLayer(dqn.model, dqn.layers[1], observation)
 
     return

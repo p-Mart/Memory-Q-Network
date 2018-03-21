@@ -6,7 +6,7 @@ import keras.backend as K
 
 from SpatialMemory2 import *
 
-def NeuralMapModel(e_t_size, context_size, window_length, nb_actions, maze_dim):
+def NeuralMapModel(e_t_size, context_size, window_length, nb_actions, maze_dim, memory_size):
     '''
     Architecture of the MQN.
     Initialize by calling:
@@ -23,33 +23,18 @@ def NeuralMapModel(e_t_size, context_size, window_length, nb_actions, maze_dim):
     input_layer = Input((maze_dim[0], maze_dim[1],1))
 
     provider = Flatten()(input_layer)
+    e = Dense(e_t_size, activation="relu")(provider)
 
-    e = Dense(e_t_size)(provider)
-    e = Dropout(rate=0.5)(e)
-    '''
-    # For 8 - square partial observability
-    input_layer = Input((window_length,8,))
+    context = Dense(context_size, activation="relu")(e)
 
-    provider = Dense(e_t_size, activation=PReLU())(input_layer)
-    provider = Dropout(0.5)(provider)
-    provider = Dense(e_t_size, activation=PReLU())(provider)
-    provider = Dropout(0.5)(provider)
-
-    e = Dense(e_t_size, activation=PReLU())(provider)
-    e = Dropout(0.5)(e)
-    '''
-    context = Dense(context_size, activation="linear")(e)
-
-    #conc = Concatenate()([e, context])
-
-    # memory = SimpleMemory(context_size, memory_size=memory_size, return_sequences=True)(conc)
     xy_pos = Input((2,), dtype='int32')
-    memory = NeuralMap(context_size)([context, xy_pos])
+    memory = NeuralMap(context_size, memory_size=memory_size)([context, xy_pos])
 
-    output_layer = Dense(context_size, activation=PReLU())(context)
-    output_layer = Merge()([output_layer, memory])
-    output_layer = Dense(context_size, activation=PReLU())(output_layer)
-    output_layer = Dropout(0.5)(output_layer)
+    output_layer = Dense(context_size, activation='relu')(context)
+    output_layer = Add()([output_layer, memory])
+    output_layer = Dropout(0.7)(output_layer)
+    output_layer = Dense(context_size, activation='relu')(output_layer)
+    output_layer = Dropout(0.7)(output_layer)
 
     output_layer = Dense(nb_actions, activation="linear")(output_layer)
 
