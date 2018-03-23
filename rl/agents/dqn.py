@@ -68,8 +68,8 @@ class AbstractDQNAgent(Agent):
         if self.has_pos and hasattr(batch[0], "shape"):
             batch[0] = np.array([batch[0]])
             batch[1] = np.array([batch[1]])
-        #else:
-        #    batch = np.array(batch)
+        else:
+            batch = np.array(batch)
 
         if self.processor is None:
             return batch
@@ -77,7 +77,7 @@ class AbstractDQNAgent(Agent):
 
     def compute_batch_q_values(self, state_batch):
         batch = self.process_state_batch(state_batch)
-        q_values = self.model.predict_on_batch(batch)
+        q_values = self.model.predict_on_batch(np.array([batch]))
 
         if self.has_pos:
             assert q_values.shape == (len(state_batch[0]), self.nb_actions)

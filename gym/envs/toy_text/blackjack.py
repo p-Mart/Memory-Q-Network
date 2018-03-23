@@ -68,7 +68,7 @@ class BlackjackEnv(gym.Env):
     This environment corresponds to the version of the blackjack problem
     described in Example 5.1 in Reinforcement Learning: An Introduction
     by Sutton and Barto (1998).
-    http://incompleteideas.net/sutton/book/the-book.html
+    https://webdocs.cs.ualberta.ca/~sutton/book/the-book.html
     """
     def __init__(self, natural=False):
         self.action_space = spaces.Discrete(2)

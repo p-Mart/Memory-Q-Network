@@ -137,16 +137,6 @@ register(
 )
 
 register(
-    id='KellyCoinflip-v0',
-    entry_point='gym.envs.toy_text:KellyCoinflipEnv',
-    reward_threshold=246.61,
-)
-register(
-    id='KellyCoinflipGeneralized-v0',
-    entry_point='gym.envs.toy_text:KellyCoinflipGeneralizedEnv',
-)
-
-register(
     id='FrozenLake-v0',
     entry_point='gym.envs.toy_text:FrozenLakeEnv',
     kwargs={'map_name' : '4x4'},
@@ -160,11 +150,6 @@ register(
     kwargs={'map_name' : '8x8'},
     max_episode_steps=200,
     reward_threshold=0.99, # optimum = 1
-)
-
-register(
-    id='CliffWalking-v0',
-    entry_point='gym.envs.toy_text:CliffWalkingEnv',
 )
 
 register(
@@ -208,27 +193,6 @@ register(
     entry_point='gym.envs.mujoco:ReacherEnv',
     max_episode_steps=50,
     reward_threshold=-3.75,
-)
-
-register(
-    id='Pusher-v0',
-    entry_point='gym.envs.mujoco:PusherEnv',
-    max_episode_steps=100,
-    reward_threshold=0.0,
-)
-
-register(
-    id='Thrower-v0',
-    entry_point='gym.envs.mujoco:ThrowerEnv',
-    max_episode_steps=100,
-    reward_threshold=0.0,
-)
-
-register(
-    id='Striker-v0',
-    entry_point='gym.envs.mujoco:StrikerEnv',
-    max_episode_steps=100,
-    reward_threshold=0.0,
 )
 
 register(
@@ -299,7 +263,7 @@ for game in ['air_raid', 'alien', 'amidar', 'assault', 'asterix', 'asteroids', '
     'bank_heist', 'battle_zone', 'beam_rider', 'berzerk', 'bowling', 'boxing', 'breakout', 'carnival',
     'centipede', 'chopper_command', 'crazy_climber', 'demon_attack', 'double_dunk',
     'elevator_action', 'enduro', 'fishing_derby', 'freeway', 'frostbite', 'gopher', 'gravitar',
-    'hero', 'ice_hockey', 'jamesbond', 'journey_escape', 'kangaroo', 'krull', 'kung_fu_master',
+    'ice_hockey', 'jamesbond', 'journey_escape', 'kangaroo', 'krull', 'kung_fu_master',
     'montezuma_revenge', 'ms_pacman', 'name_this_game', 'phoenix', 'pitfall', 'pong', 'pooyan',
     'private_eye', 'qbert', 'riverraid', 'road_runner', 'robotank', 'seaquest', 'skiing',
     'solaris', 'space_invaders', 'star_gunner', 'tennis', 'time_pilot', 'tutankham', 'up_n_down',
@@ -327,7 +291,7 @@ for game in ['air_raid', 'alien', 'amidar', 'assault', 'asterix', 'asteroids', '
         )
 
         register(
-            id='{}-v4'.format(name),
+            id='{}-v3'.format(name),
             entry_point='gym.envs.atari:AtariEnv',
             kwargs={'game': game, 'obs_type': obs_type},
             max_episode_steps=100000,
@@ -350,7 +314,7 @@ for game in ['air_raid', 'alien', 'amidar', 'assault', 'asterix', 'asteroids', '
         )
 
         register(
-            id='{}Deterministic-v4'.format(name),
+            id='{}Deterministic-v3'.format(name),
             entry_point='gym.envs.atari:AtariEnv',
             kwargs={'game': game, 'obs_type': obs_type, 'frameskip': frameskip},
             max_episode_steps=100000,
@@ -368,7 +332,7 @@ for game in ['air_raid', 'alien', 'amidar', 'assault', 'asterix', 'asteroids', '
         # No frameskip. (Atari has no entropy source, so these are
         # deterministic environments.)
         register(
-            id='{}NoFrameskip-v4'.format(name),
+            id='{}NoFrameskip-v3'.format(name),
             entry_point='gym.envs.atari:AtariEnv',
             kwargs={'game': game, 'obs_type': obs_type, 'frameskip': 1}, # A frameskip of 1 means we get every frame
             max_episode_steps=frameskip * 100000,
@@ -506,76 +470,4 @@ register(
     id='OffSwitchCartpoleProb-v0',
     entry_point='gym.envs.safety:OffSwitchCartpoleProbEnv',
     max_episode_steps=200,
-)
-
-
-#Maze Environments
-register(
-    id='MazeF1-v0',
-    entry_point='gym.envs.gym_maze.envs:MazeF1',
-    #max_episode_steps=50,
-    #nondeterministic=False
-)
-
-register(
-    id='MazeF2-v0',
-    entry_point='gym.envs.gym_maze.envs:MazeF2',
-    #max_episode_steps=50,
-    #nondeterministic=False
-)
-
-register(
-    id='MazeF3-v0',
-    entry_point='gym.envs.gym_maze.envs:MazeF3',
-    #max_episode_steps=50,
-    #nondeterministic=False
-)
-
-register(
-    id='MazeF4-v0',
-    entry_point='gym.envs.gym_maze.envs:MazeF4',
-    #max_episode_steps=50,
-    #nondeterministic=True
-)
-
-register(
-    id='Maze5-v0',
-    entry_point='gym.envs.gym_maze.envs:Maze5',
-    #max_episode_steps=50,
-    #nondeterministic=True
-)
-
-register(
-    id='BMaze4-v0',
-    entry_point='gym.envs.gym_maze.envs:BMaze4',
-    #max_episode_steps=50,
-    #nondeterministic=False
-)
-
-register(
-    id='IMaze2-v0',
-    entry_point='gym.envs.gym_maze.envs:IMaze2',
-    #max_episode_steps=50,
-    #nondeterministic=False
-)
-
-register(
-    id='IMaze3-v0',
-    entry_point='gym.envs.gym_maze.envs:IMaze3',
-    #max_episode_steps=50,
-    #nondeterministic=False
-)
-
-register(
-    id='IMaze6-v0',
-    entry_point='gym.envs.gym_maze.envs:IMaze6',
-    #max_episode_steps=50,
-    #nondeterministic=False
-)
-
-register(
-    id='IMaze8-v0',
-    entry_point='gym.envs.gym_maze.envs:IMaze8',
-    #max_episode_steps=50,
-    #nondeterministic=False
 )

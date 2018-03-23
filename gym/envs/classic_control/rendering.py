@@ -317,8 +317,14 @@ class SimpleImageViewer(object):
             self.width = width
             self.height = height
             self.isopen = True
-        assert arr.shape == (self.height, self.width, 3), "You passed in an image with the wrong number shape"
-        image = pyglet.image.ImageData(self.width, self.height, 'RGB', arr.tobytes(), pitch=self.width * -3)
+        assert arr.shape == (self.height, self.width, 3) or (self.height, self.width, 1),\
+            "You passed in an image with the wrong number shape"
+        im_mode = 'RGB'
+        if arr.shape[-1] == 3:
+            im_mode = 'RGB'
+        elif arr.shape[-1] == 1:
+            im_mode = 'L'
+        image = pyglet.image.ImageData(self.width, self.height, im_mode, arr.tobytes(), pitch=self.width * -arr.shape[-1])
         self.window.clear()
         self.window.switch_to()
         self.window.dispatch_events()

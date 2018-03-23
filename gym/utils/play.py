@@ -3,18 +3,16 @@ import pygame
 import sys
 import time
 import matplotlib
-try:
-    matplotlib.use('GTK3Agg')
-    import matplotlib.pyplot as plt
-except Exception:
-    pass
-
-
-import pyglet.window as pw
+import matplotlib.pyplot as plt
 
 from collections import deque
 from pygame.locals import HWSURFACE, DOUBLEBUF, RESIZABLE, VIDEORESIZE
 from threading import Thread
+
+try:
+    matplotlib.use('GTK3Agg')
+except Exception:
+    pass
 
 def display_arr(screen, arr, video_size, transpose):
     arr_min, arr_max = arr.min(), arr.max()
@@ -182,5 +180,14 @@ class PlayPlot(object):
 
 
 if __name__ == '__main__':
-    env = gym.make("MontezumaRevengeNoFrameskip-v4")
-    play(env, zoom=4, fps=60)
+    from rl_algs.common.atari_wrappers import wrap_deepmind
+
+    def callback(obs_t, obs_tp1, action, rew, done, info):
+        return [rew, obs_t.mean()]
+    env_plotter = EnvPlotter(callback, 30 * 5, ["reward", "mean intensity"])
+
+    env = gym.make("MontezumaRevengeNoFrameskip-v3")
+    env = wrap_deepmind(env)
+
+    play_env(env, zoom=4, callback=env_plotter.callback, fps=30)
+

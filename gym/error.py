@@ -134,7 +134,3 @@ class DoubleWrapperError(Error):
 
 class WrapAfterConfigureError(Error):
     pass
-
-
-class RetriesExceededError(Error):
-    pass

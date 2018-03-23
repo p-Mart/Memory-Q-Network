@@ -10,8 +10,7 @@ and then modified by Arnaud de Broissia
 
 * the OpenAI/gym MountainCar environment
 itself from 
-http://incompleteideas.net/sutton/MountainCar/MountainCar1.cp
-permalink: https://perma.cc/6Z2N-PFWC
+https://webdocs.cs.ualberta.ca/~sutton/MountainCar/MountainCar1.cp
 """
 
 import math

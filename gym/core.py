@@ -51,9 +51,9 @@ class Env(object):
         env = super(Env, cls).__new__(cls)
         env._env_closer_id = env_closer.register(env)
         env._closed = False
-        env._spec = None
 
         # Will be automatically set when creating an environment via 'make'
+        env.spec = None
         return env
 
     # Set this in SOME subclasses
@@ -71,11 +71,18 @@ class Env(object):
     # Override in ALL subclasses
     def _step(self, action): raise NotImplementedError
     def _reset(self): raise NotImplementedError
-    def _render(self, mode='human', close=False): return
+    def _render(self, mode='human', close=False):
+        if close:
+            return
+        raise NotImplementedError
     def _seed(self, seed=None): return []
 
     # Do not override
     _owns_render = True
+
+    @property
+    def monitor(self):
+        raise error.Error("env.monitor has been deprecated as of 12/23/2016. Remove your call to `env.monitor.start(directory)` and instead wrap your env with `env = gym.wrappers.Monitor(env, directory)` to record data.")
 
     def step(self, action):
         """Run one timestep of the environment's dynamics. When end of
@@ -141,12 +148,12 @@ class Env(object):
                 else:
                     super(MyEnv, self).render(mode=mode) # just raise an exception
         """
-        if not close: # then we have to check rendering mode
-            modes = self.metadata.get('render.modes', [])
-            if len(modes) == 0:
-                raise error.UnsupportedMode('{} does not support rendering (requested mode: {})'.format(self, mode))
-            elif mode not in modes:
-                raise error.UnsupportedMode('Unsupported rendering mode: {}. (Supported modes for {}: {})'.format(mode, self, modes))
+        if close: return        
+        modes = self.metadata.get('render.modes', [])
+        if len(modes) == 0:
+            raise error.UnsupportedMode('{} does not support rendering (requested mode: {})'.format(self, mode))
+        elif mode not in modes:
+            raise error.UnsupportedMode('Unsupported rendering mode: {}. (Supported modes for {}: {})'.format(mode, self, modes))
         return self._render(mode=mode, close=close)
 
     def close(self):
@@ -187,10 +194,6 @@ class Env(object):
         return self._seed(seed)
 
     @property
-    def spec(self):
-        return self._spec
-
-    @property
     def unwrapped(self):
         """Completely unwrap this env.
 
@@ -203,10 +206,7 @@ class Env(object):
         self.close()
 
     def __str__(self):
-        if self.spec is None:
-            return '<{} instance>'.format(type(self).__name__)
-        else:
-            return '<{}<{}>>'.format(type(self).__name__, self.spec.id)
+        return '<{} instance>'.format(type(self).__name__)
 
     def configure(self, *args, **kwargs):
         raise error.Error("Env.configure has been removed in gym v0.8.0, released on 2017/03/05. If you need Env.configure, please use gym version 0.7.x from pip, or checkout the `gym:v0.7.4` tag from git.")
@@ -260,6 +260,7 @@ class Wrapper(Env):
         self.action_space = self.env.action_space
         self.observation_space = self.env.observation_space
         self.reward_range = self.env.reward_range
+        self.spec = self.env.spec
         self._ensure_no_double_wrap()
 
     @classmethod
@@ -269,7 +270,7 @@ class Wrapper(Env):
     def _ensure_no_double_wrap(self):
         env = self.env
         while True:
-            if isinstance(env, Wrapper):
+            if isinstance(env, Wrapper): 
                 if env.class_name() == self.class_name():
                     raise error.DoubleWrapperError("Attempted to double wrap with Wrapper: {}".format(self.__class__.__name__))
                 env = env.env
@@ -279,15 +280,14 @@ class Wrapper(Env):
     def _step(self, action):
         return self.env.step(action)
 
-    def _reset(self, **kwargs):
-        return self.env.reset(**kwargs)
+    def _reset(self):
+        return self.env.reset()
 
     def _render(self, mode='human', close=False):
         return self.env.render(mode, close)
 
     def _close(self):
-        if self.env:
-            return self.env.close()
+        return self.env.close()
 
     def _seed(self, seed=None):
         return self.env.seed(seed)
@@ -302,13 +302,9 @@ class Wrapper(Env):
     def unwrapped(self):
         return self.env.unwrapped
 
-    @property
-    def spec(self):
-        return self.env.spec
-
 class ObservationWrapper(Wrapper):
-    def _reset(self, **kwargs):
-        observation = self.env.reset(**kwargs)
+    def _reset(self):
+        observation = self.env.reset()
         return self._observation(observation)
 
     def _step(self, action):

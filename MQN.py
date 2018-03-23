@@ -1,6 +1,7 @@
 import sys
 import os
 import errno
+import itertools as it
 
 import numpy as np
 import matplotlib
@@ -17,6 +18,9 @@ from rl.memory import SequentialMemory, Memory
 from rl.callbacks import TrainEpisodeLogger
 
 import gym
+import ppaquette_gym_doom
+from ppaquette_gym_doom.wrappers import *
+from vizdoom import *
 from MQNModel import *
 from NeuralMapModel import *
 from DQNModel import *
@@ -41,20 +45,28 @@ sns.set()
 def main(model_name, options):
 
     # Initialize maze environments.
-    env = gym.make('IMaze3-v0')
+    #env = gym.make('IMaze3-v0')
+    #env = gym.make('CartPole-v0')
     # env = gym.make('Taxi-v2')
+    env = gym.make('ppaquette/DoomBasic-v0')
+    wrapper = ToDiscrete('minimal')
+    env = wrapper(env)
 
     envs = [env]
 
     # Setting hyperparameters.
     nb_actions = env.action_space.n
-    maze_dim = env.maze_dim
-    h_size = 8  # For DQN
+
+    # Needs to be a tuple
+    res = (30, 45, 1)
+    observation_space = res
+
+    h_size = 32  # For DQN
     e_t_size = 8  # For MQN / RMQN
     context_size = 32
-    nb_steps_warmup = int(1e4)
+    nb_steps_warmup = int(1e5)
     nb_steps = int(4e5)
-    buffer_size = 8e4
+    buffer_size = 1e5
     learning_rate = 0.03
     target_model_update = 0.999
     clipnorm = 10.
@@ -66,7 +78,7 @@ def main(model_name, options):
     log = TrainEpisodeLogger()
     # tensorboard = TensorBoard(log_dir="./logs/{}".format(model_name))
     rl_tensorboard = RLTensorBoard(
-        log_dir="./logs/{}".format(model_name), histogram_freq=10)
+        log_dir="./logs/{}".format(model_name), histogram_freq=10000)
 
     callbacks = [log, rl_tensorboard]
     if "debug" in options:
@@ -114,8 +126,8 @@ def main(model_name, options):
     
     # DQN model
     if "DQN" in options:
-        model = DQNmodel(nb_actions, window_length, h_size, maze_dim)
-        target_model = DQNmodel(nb_actions, window_length, h_size, maze_dim)
+        model = DQNmodel(nb_actions, window_length, h_size, observation_space)
+        target_model = DQNmodel(nb_actions, window_length, h_size, observation_space)
 
     # Initialize our target model with the same weights as our model.
     target_model.set_weights(model.get_weights())
@@ -135,18 +147,19 @@ def main(model_name, options):
         value_max=1.0,
         value_min=0.1,
         value_test=0.,
-        nb_steps=4e4
+        nb_steps=nb_steps_warmup
     )
 
     # Optional processor.
     # processor = TaxiProcessor()
-    processor = MazeProcessor(gives_pos=True)
+    # processor = MazeProcessor(gives_pos=True)
+    processor = DoomProcessor(res=res)
 
     # Initialize and compile the DQN agent.
 
     dqn = DQNAgent(
         model=model,
-        has_pos=True,
+        #has_pos=True,
         target_model=target_model, 
         nb_actions=nb_actions, 
         memory=experience,
@@ -177,7 +190,7 @@ def main(model_name, options):
     '''
 
     # Compile the agent to check for validity, build tensorflow graph, etc.
-    dqn.compile(RMSprop(lr=learning_rate, clipnorm=clipnorm), metrics=["mae"])
+    dqn.compile(RMSprop(lr=learning_rate), metrics=["mae"])
 
     # Weights will be loaded if weight file exists.
     if os.path.exists("data/{}/{}".format(model_name, model_name + ".h5")):
@@ -223,6 +236,7 @@ def main(model_name, options):
         # visualizeLayer(dqn.model, dqn.layers[1], observation)
 
     return
+
 
 if __name__ == "__main__":
 

@@ -128,5 +128,4 @@ class FrozenLakeEnv(discrete.DiscreteEnv):
             outfile.write("\n")
         outfile.write("\n".join(''.join(line) for line in desc)+"\n")
 
-        if mode != 'human':
-            return outfile
+        return outfile

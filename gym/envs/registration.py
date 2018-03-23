@@ -82,14 +82,11 @@ class EnvSpec(object):
         if self._entry_point is None:
             raise error.Error('Attempting to make deprecated env {}. (HINT: is there a newer registered version of this env?)'.format(self.id))
 
-        elif callable(self._entry_point):
-            env = self._entry_point()
-        else:
-            cls = load(self._entry_point)
-            env = cls(**self._kwargs)
+        cls = load(self._entry_point)
+        env = cls(**self._kwargs)
 
         # Make the enviroment aware of which spec it came from.
-        env.unwrapped._spec = self
+        env.spec = self
 
         return env
 

@@ -3,6 +3,8 @@ import os
 import errno
 import copy
 
+import skimage.color, skimage.transform
+
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -148,7 +150,6 @@ class RLTensorBoard(Callback):
     def on_train_end(self, _):
         self.writer.close()
 
-
 class TaxiProcessor(Processor):
     """Processor for the taxi environment.
     Normalizes the input values to be within
@@ -161,7 +162,6 @@ class TaxiProcessor(Processor):
     def process_state_batch(self, batch):
         processed_batch = batch / 500.
         return processed_batch
-
 
 class MazeProcessor(Processor):
     """Processor for the maze environment.
@@ -179,6 +179,27 @@ class MazeProcessor(Processor):
             processed_observation = observation
         else:
             processed_observation = np.array(observation, dtype=np.float16) / 10.
+
+        return processed_observation
+
+    def process_state_batch(self, batch):
+        processed_batch = batch
+        return processed_batch
+
+class DoomProcessor(Processor):
+    """
+    Processor for the doom environment.
+
+    Reduce the input images down to size res
+    """
+
+    def __init__(self, res=(30, 45)):
+        super(DoomProcessor, self).__init__()
+        self.res = res
+
+    def process_observation(self, observation):
+        processed_observation = skimage.transform.resize(observation, self.res)
+        processed_observation = processed_observation.astype(np.float32)
 
         return processed_observation
 

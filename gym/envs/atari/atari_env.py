@@ -45,6 +45,7 @@ class AtariEnv(gym.Env, utils.EzPickle):
         self._seed()
 
         (screen_width, screen_height) = self.ale.getScreenDims()
+        self._buffer = np.empty((screen_height, screen_width, 4), dtype=np.uint8)
 
         self._action_set = self.ale.getMinimalActionSet()
         self.action_space = spaces.Discrete(len(self._action_set))
@@ -83,7 +84,8 @@ class AtariEnv(gym.Env, utils.EzPickle):
         return ob, reward, self.ale.game_over(), {"ale.lives": self.ale.lives()}
 
     def _get_image(self):
-        return self.ale.getScreenRGB2()
+        self.ale.getScreenRGB(self._buffer)  # says rgb but actually bgr
+        return self._buffer[:, :, [2, 1, 0]]
 
     def _get_ram(self):
         return to_ram(self.ale)
@@ -145,34 +147,18 @@ class AtariEnv(gym.Env, utils.EzPickle):
 
         return keys_to_action
 
-    def clone_state(self):
-        """Clone emulator state w/o system state. Restoring this state will
-        *not* give an identical environment. For complete cloning and restoring
-        of the full state, see `{clone,restore}_full_state()`."""
-        state_ref = self.ale.cloneState()
-        state = self.ale.encodeState(state_ref)
-        self.ale.deleteState(state_ref)
-        return state
+    # def save_state(self):
+    #     return self.ale.saveState()
 
-    def restore_state(self, state):
-        """Restore emulator state w/o system state."""
-        state_ref = self.ale.decodeState(state)
-        self.ale.restoreState(state_ref)
-        self.ale.deleteState(state_ref)
+    # def load_state(self):
+    #     return self.ale.loadState()
 
-    def clone_full_state(self):
-        """Clone emulator state w/ system state including pseudorandomness.
-        Restoring this state will give an identical environment."""
-        state_ref = self.ale.cloneSystemState()
-        state = self.ale.encodeState(state_ref)
-        self.ale.deleteState(state_ref)
-        return state
+    # def clone_state(self):
+    #     return self.ale.cloneState()
 
-    def restore_full_state(self, state):
-        """Restore emulator state w/ system state including pseudorandomness."""
-        state_ref = self.ale.decodeState(state)
-        self.ale.restoreSystemState(state_ref)
-        self.ale.deleteState(state_ref)
+    # def restore_state(self, state):
+    #     return self.ale.restoreState(state)
+
 
 ACTION_MEANING = {
     0 : "NOOP",
