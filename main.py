@@ -125,8 +125,8 @@ def main(model_name, options):
     end_eps = 0.1
     learning_rate = 0.00025
     discount = 0.99
-    replay_size = 10000
-    nb_steps_warmup = 100000
+    replay_size = 100000
+    nb_steps_warmup = 10000
     nb_episodes = 1000
     nb_episodes_test = 100
     h_size = 512
@@ -194,6 +194,9 @@ def main(model_name, options):
 
     # Other parameters
     eps = start_eps
+    if "load" in options:
+        eps = end_eps
+
     eps_stepdown = (start_eps - end_eps) / nb_steps_warmup
 
     steps_per_episode = []
