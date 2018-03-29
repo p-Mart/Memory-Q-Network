@@ -126,8 +126,8 @@ def main(model_name, options):
     learning_rate = 0.00025
     discount = 0.99
     replay_size = 10000
-    nb_steps_warmup = 10000
-    nb_episodes = 10000
+    nb_steps_warmup = 100000
+    nb_episodes = 1000
     nb_episodes_test = 100
     h_size = 512
     buffer_size = 10000
