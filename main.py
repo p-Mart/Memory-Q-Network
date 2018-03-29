@@ -35,9 +35,9 @@ class DQN:
         # Architecture
         self.conv_1 = tf.layers.conv2d(
             inputs=self.input,
-            filters=8,
-            kernel_size=(6,6),
-            strides=(3,3),
+            filters=32,
+            kernel_size=(8, 8),
+            strides=(4, 4),
             activation=tf.nn.relu,
             kernel_initializer=tf.contrib.layers.xavier_initializer_conv2d(),
             bias_initializer=tf.constant_initializer(0.1)
@@ -45,14 +45,23 @@ class DQN:
 
         self.conv_2 = tf.layers.conv2d(
             inputs=self.conv_1,
-            filters=8,
-            kernel_size=(3,3),
-            strides=(2,2),
+            filters=32,
+            kernel_size=(4, 4),
+            strides=(2, 2),
             kernel_initializer=tf.contrib.layers.xavier_initializer_conv2d(),
             bias_initializer=tf.constant_initializer(0.1)
         )
 
-        self.flatten = tf.layers.flatten(self.conv_2)
+        self.conv_3 = tf.layers.conv2d(
+            inputs=self.conv_1,
+            filters=64,
+            kernel_size=(3, 3),
+            strides=(1, 1),
+            kernel_initializer=tf.contrib.layers.xavier_initializer_conv2d(),
+            bias_initializer=tf.constant_initializer(0.1)
+        )
+
+        self.flatten = tf.layers.flatten(self.conv_3)
 
         self.h_1 = tf.layers.dense(
             inputs=self.flatten,
@@ -94,7 +103,7 @@ def updateTargetNetwork(op_holder, sess):
 
 def preprocess(data, resolution):
     """
-    Data processor for ViZDoom
+    Data processor
 
     :param data: game frames
     :param resolution: resolution to resize game frames to
@@ -102,7 +111,8 @@ def preprocess(data, resolution):
     """
 
     processed_data = skimage.transform.resize(data, output_shape=resolution)
-    processed_data = processed_data.astype(np.float32)
+    processed_data = processed_data.astype(np.float32) / 255.
+
     return processed_data
 
 def main(model_name, options):
@@ -119,9 +129,9 @@ def main(model_name, options):
     nb_steps_warmup = 10000
     nb_episodes = 10000
     nb_episodes_test = 100
-    h_size = 128
+    h_size = 512
     buffer_size = 10000
-    env_name = 'ppaquette/DoomMyWayHome-v0'
+    env_name = 'Pong-v0'
 
     hyperparameters = {
         'batch_size' : batch_size,
@@ -143,13 +153,13 @@ def main(model_name, options):
 
     # Initialize environment.
     env = gym.make(env_name)
-    wrapper = ToDiscrete('minimal')
-    env = wrapper(env)
+    #wrapper = ToDiscrete('minimal')
+    #env = wrapper(env)
 
     # Env parameters
     nb_actions = env.action_space.n
     #observation_shape = env.observation_space.shape # Might break?
-    processed_resolution = (30, 45, 3)
+    processed_resolution = (210 / 3,160 / 3, 1)
     observation_shape = processed_resolution
 
     # Initialize networks, tensorflow vars
