@@ -1,9 +1,20 @@
 Implementation of a Memory-Q-Network using keras and a slightly modified keras-rl. WIP
 
 
+
+
 ## Usage: 
+To use the Tensorflow version (slightly faster than keras version):
 ```
-python MQN.py [weights_name].h5 [train || test] [options = (debug, )]
+python main.py [model_name] [train || test]  [options = (load,)]
+```
+Example usage: `python main.py pong_test1_dqn train`
+Or if you want to load a pre-existing model (assume pong_test1_dqn is the name of a trained model):
+`python main.py pong_test1_dqn train load`
+
+To use the Keras version:
+```
+python MQN.py [model_name] [train || test] [options = (debug, )]
 ```
 
 [weights_name] will be the name of a file containing the weights for the network (in .h5 format). The weights will be loaded prior to any training or testing.
