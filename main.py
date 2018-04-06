@@ -53,7 +53,7 @@ class DQN:
         )
 
         self.conv_3 = tf.layers.conv2d(
-            inputs=self.conv_1,
+            inputs=self.conv_2,
             filters=64,
             kernel_size=(3, 3),
             strides=(1, 1),
