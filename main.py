@@ -420,12 +420,14 @@ def main(model_name, options):
                         action = sess.run(model.predict, feed_dict={model.input:[observation]})[0]
 
                     # Step through environment
-                    observation_next, reward, done, _ = env.step(action)
+                    observation_new, reward, done, _ = env.step(action)
 
                     # Record in experience buffer
-                    observation_next = preprocess(observation_next, processed_resolution)
+                    observation_new = preprocess(observation_new, processed_resolution)
 
-                    observation_next = observation_next - observation
+                    # Store as a difference frame (for pong)
+                    # TODO : Change this so it doesn't have to be edited out on new envs
+                    observation_next = observation_new - observation
 
                     new_experience = np.array([observation, action, reward, observation_next, done])
                     new_experience = new_experience.reshape((1, 5))
@@ -457,10 +459,8 @@ def main(model_name, options):
                             # Update target network
                             updateTargetNetwork(target_ops, sess)
 
-
-
                     r_all += reward
-                    observation = observation_next
+                    observation = observation_new
 
                     if done:
                         break
