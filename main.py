@@ -7,7 +7,7 @@ import random
 from tqdm import trange
 
 import numpy as np
-import tensorflow as tf
+from tensorflow.python.ops.rnn_cell_impl import *
 import gym
 import ppaquette_gym_doom
 from ppaquette_gym_doom.wrappers import *
@@ -53,7 +53,7 @@ class DQN:
         )
 
         self.conv_3 = tf.layers.conv2d(
-            inputs=self.conv_1,
+            inputs=self.conv_2,
             filters=64,
             kernel_size=(3, 3),
             strides=(1, 1),
@@ -71,6 +71,8 @@ class DQN:
             bias_initializer=tf.constant_initializer(0.1)
         )
 
+
+
         self.output =tf.layers.dense(
             inputs=self.h_1,
             units=nb_actions
@@ -86,8 +88,185 @@ class DQN:
         self.q = tf.reduce_sum(tf.multiply(self.output, self.actions_onehot), axis=1)
 
         self.loss = tf.losses.mean_squared_error(self.target_q, self.q)
+        self.optimizer = tf.train.RMSPropOptimizer(learning_rate=learning_rate)
+        self.update_model = self.optimizer.minimize(self.loss)
+
+class MQN:
+    def __init__(self, learning_rate, nb_actions, observation_shape, h_size=128, memory_size=12):
+        self.input = tf.placeholder(shape=[None]+list(observation_shape), dtype=tf.float32)
+
+        # Input processing
+        self.conv_1 = tf.layers.conv2d(
+            inputs=self.input,
+            filters=8,
+            kernel_size=(8, 8),
+            strides=(4, 4),
+            activation=tf.nn.relu,
+            kernel_initializer=tf.contrib.layers.xavier_initializer_conv2d(),
+            bias_initializer=tf.constant_initializer(0.1)
+        )
+
+        self.conv_2 = tf.layers.conv2d(
+            inputs=self.conv_1,
+            filters=8,
+            kernel_size=(4, 4),
+            strides=(2, 2),
+            kernel_initializer=tf.contrib.layers.xavier_initializer_conv2d(),
+            bias_initializer=tf.constant_initializer(0.1)
+        )
+
+        self.conv_3 = tf.layers.conv2d(
+            inputs=self.conv_2,
+            filters=16,
+            kernel_size=(3, 3),
+            strides=(1, 1),
+            kernel_initializer=tf.contrib.layers.xavier_initializer_conv2d(),
+            bias_initializer=tf.constant_initializer(0.1)
+        )
+
+        self.flatten = tf.layers.flatten(self.conv_3)
+
+        self.h_1 = tf.layers.dense(
+            inputs=self.flatten,
+            units=h_size,
+            activation=tf.nn.relu,
+            kernel_initializer=tf.contrib.layers.xavier_initializer(),
+            bias_initializer=tf.constant_initializer(0.1)
+        )
+
+        self.context = tf.layers.dense(
+            inputs=self.h_1,
+            units=h_size,
+            activation=tf.nn.relu,
+            kernel_initializer=tf.contrib.layers.xavier_initializer(),
+            bias_initializer=tf.constant_initializer(0.1)
+        )
+
+        self.concatenated = tf.concat([self.context, self.h_1], axis=1)
+
+        self.temporal_memory_cell = MQNCell(num_units=h_size, memory_size=memory_size)
+        self.temporal_memory_out, self.last_states = tf.nn.static_rnn(
+            cell=self.temporal_memory_cell,
+            inputs=[self.concatenated],
+            dtype=tf.float32
+        )
+
+        self.concat_2 = tf.concat([self.context, self.temporal_memory_out[0]], axis=1)
+
+        self.h_2 = tf.layers.dense(
+            inputs=self.concat_2,
+            units=h_size,
+            activation=tf.nn.relu,
+            kernel_initializer=tf.contrib.layers.xavier_initializer(),
+            bias_initializer=tf.constant_initializer(0.1)
+        )
+
+
+        # Output
+        self.output =tf.layers.dense(
+            inputs=self.temporal_memory_out[0],
+            units=nb_actions
+        )
+
+        self.predict = tf.argmax(self.output, axis=1)
+
+        # Everything needed to calculate loss function
+        self.target_q = tf.placeholder(shape=[None], dtype=tf.float32)
+        self.actions = tf.placeholder(shape=[None], dtype=tf.int32)
+        self.actions_onehot = tf.one_hot(self.actions, nb_actions, dtype=tf.float32)
+
+        self.q = tf.reduce_sum(tf.multiply(self.output, self.actions_onehot), axis=1)
+
+        self.loss = tf.losses.mean_squared_error(self.target_q, self.q)
         self.optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate)
         self.update_model = self.optimizer.minimize(self.loss)
+
+class MQNCell(RNNCell):
+    def __init__(self,
+                 num_units,
+                 activation=None,
+                 reuse=None,
+                 kernel_initializer=None,
+                 bias_initializer=None,
+                 name=None,
+                 memory_size=12):
+
+        super(MQNCell, self).__init__(_reuse=reuse, name=name)
+
+
+        self._num_units = num_units
+        self._kernel_initializer = kernel_initializer
+        self._memory_size = memory_size
+        self._state_size = (self._num_units, ) * \
+            (self._memory_size * 2)  # M_key, M_value
+
+        self.W_key = self.add_variable(
+            shape=(self._num_units, self._num_units),
+            name='W_key',
+            initializer=self._kernel_initializer
+        )
+
+        self.W_value = self.add_variable(
+            shape=(self._num_units, self._num_units),
+            name='W_value',
+            initializer=self._kernel_initializer
+        )
+
+    @property
+    def state_size(self):
+        return self._state_size
+
+    @property
+    def output_size(self):
+        return self._num_units
+
+    def build(self, input_shape):
+        input_dim = input_shape[-1]
+        self.W_key = self.add_variable(
+            shape=(self._num_units, self._num_units),
+            name='W_key',
+            initializer=self._kernel_initializer
+        )
+
+        self.W_value = self.add_variable(
+            shape=(self._num_units, self._num_units),
+            name='W_value',
+            initializer=self._kernel_initializer
+        )
+
+        # super(SimpleMemoryCell, self).build(input_shape)
+        self.built = True
+
+    def __call__(self, inputs, states, scope=None):
+
+        # inputs is e_t concatenated with h_t
+
+        e_t = inputs[:, :-self._num_units]
+        h_t = inputs[:, -self._num_units:]
+
+        # states is M_key, M_value
+        M_key = list(states[:self._memory_size])  # shape=[Mxm]
+        M_value = list(states[self._memory_size:])  # shape=[Mxm]
+
+        # Conversion to tensors
+        M_key_tens = tf.stack(M_key, axis=1)
+        M_value_tens = tf.stack(M_value, axis=1)
+
+        # Calculate attention for memory
+        at = tf.nn.softmax(tf.tensordot(M_key_tens, h_t, axes=[[0,2], [0,1]]))
+
+        # Read from memory using attention, give as output
+        output = tf.tensordot(M_value_tens, at, axes=[[1], [0]])
+
+        # Update states
+        M_key.pop(0)  # shape = [M-1xm]
+        M_value.pop(0)  # shape = [M-1xm]
+        m_key = tf.matmul(e_t, self.W_key)  # shape = [1xm]
+        m_value = tf.matmul(e_t, self.W_value)  # shape = [1xm]
+        M_key.append(m_key)  # shape = [Mxm]
+        M_value.append(m_value)  # shape = [Mxm]
+
+        return output, M_key + M_value
 
 def updateTargetGraph(tf_vars, target_update):
     total_vars = len(tf_vars) // 2
@@ -117,20 +296,20 @@ def preprocess(data, resolution):
 
 def main(model_name, options):
     # Hyperparameters
-    batch_size = 64
-    update_freq = 4
+    batch_size = 32
+    update_freq = 30
     save_freq = 100
     target_model_update = 0.001
     start_eps = 1.0
     end_eps = 0.1
     learning_rate = 0.00025
     discount = 0.99
-    replay_size = 100000
-    nb_steps_warmup = 10000
-    nb_episodes = 1000
+    replay_size = 50000
+    nb_steps_warmup = 50000
+    nb_episodes = 100000
     nb_episodes_test = 100
-    h_size = 512
-    buffer_size = 10000
+    h_size = 256
+    memory_size = 30
     env_name = 'Pong-v0'
 
     hyperparameters = {
@@ -147,19 +326,20 @@ def main(model_name, options):
         'nb_episodes' : nb_episodes,
         'nb_episodes_test' : nb_episodes_test,
         'h_size' : h_size,
-        'buffer_size' : buffer_size,
+        'memory_size' : memory_size,
         'env_name' : env_name
     }
 
     # Initialize environment.
     env = gym.make(env_name)
-    #wrapper = ToDiscrete('minimal')
-    #env = wrapper(env)
+    if "doom" in env_name.lower():
+        wrapper = ToDiscrete('minimal')
+        env = wrapper(env)
 
     # Env parameters
     nb_actions = env.action_space.n
     #observation_shape = env.observation_space.shape # Might break?
-    processed_resolution = (210 / 3,160 / 3, 1)
+    processed_resolution = (80, 80, 1)
     observation_shape = processed_resolution
 
     # Initialize networks, tensorflow vars
@@ -188,14 +368,12 @@ def main(model_name, options):
     saver = tf.train.Saver()
     trainables = tf.trainable_variables()
     target_ops = updateTargetGraph(trainables, target_model_update)
-    experience = ReplayBuffer(buffer_size=buffer_size)
+    experience = ReplayBuffer(buffer_size=replay_size)
 
     sess.run(init)
 
     # Other parameters
     eps = start_eps
-    if "load" in options:
-        eps = end_eps
 
     eps_stepdown = (start_eps - end_eps) / nb_steps_warmup
 
@@ -246,6 +424,9 @@ def main(model_name, options):
 
                     # Record in experience buffer
                     observation_next = preprocess(observation_next, processed_resolution)
+
+                    observation_next = observation_next - observation
+
                     new_experience = np.array([observation, action, reward, observation_next, done])
                     new_experience = new_experience.reshape((1, 5))
                     experience.add(new_experience)
